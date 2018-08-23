@@ -10,10 +10,9 @@
 	Physijs.scripts.worker = 'js/libs/physijs_worker.js';
 	Physijs.scripts.ammo = 'ammo.js';
 	
-	var initScene, render, createShape, loader,
-		renderer, render_stats, physics_stats, scene, light, ground, ground_material, camera, bigbox;
+	var initScene, renderer, scene, camera, bigbox;
 	
-	initScene = function() {
+	function init() {
 	
 		
 		renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -23,12 +22,12 @@
 		
 		scene = new Physijs.Scene({ });
 	
-		scene.addEventListener(
+		/*scene.addEventListener(
 			'update',
 			function() {
 				scene.simulate( undefined, 2 );	
 			}
-		);
+		); */
 		
 		camera = new THREE.PerspectiveCamera(
 			35,
@@ -53,21 +52,21 @@
 		
 		
 		requestAnimationFrame( render );
-		scene.simulate();
 
 	
-	};
+	}
 	
-	render = function() {
+	function render() {
 		requestAnimationFrame( render );
 		renderer.render( scene, camera );
+		scene.simulate();
 		
 
-	};
+	}
 	
 	
 	
-	window.onload = initScene;
+	window.onload = init;
 	
 	</script>
 
