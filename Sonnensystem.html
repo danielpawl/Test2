@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset=utf-8>
+		<title>Sonnensystem</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+		</style>
+	</head>
+	<body>
+		<script src="js\build\three.js"></script>
+		<script src="js\examples\js\controls\OrbitControls.js" ></script>
+		<script src="js\src\loaders\TextureLoader.js" ></script>
+		<script src="js\examples\js\objects\Lensflare.js" ></script>
+		<script src="js\examples\js\libs\stats.min" ></script>
+		<script id="vertexShader" type="x-shader/x-vertex">
+				varying vec2 vUv;
+				void main() 
+				{ 
+					vUv = uv;
+					gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+				}
+		</script>
+		<script id="fragmentShader" type="x-shader/x-vertex"> 
+			uniform sampler2D baseTexture;
+			uniform float baseSpeed;
+			uniform sampler2D noiseTexture;
+			uniform float noiseScale;
+			uniform float alpha;
+			uniform float time;
+			
+			varying vec2 vUv;
+			void main() 
+			{
+				vec2 uvTimeShift = vUv + vec2( -0.7, 1.5 ) * time * baseSpeed;	
+				vec4 noiseGeneratorTimeShift = texture2D( noiseTexture, uvTimeShift );
+				vec2 uvNoiseTimeShift = vUv + noiseScale * vec2( noiseGeneratorTimeShift.r, noiseGeneratorTimeShift.b );
+				vec4 baseColor = texture2D( baseTexture, uvNoiseTimeShift );
+			
+				baseColor.a = alpha;
+				gl_FragColor = baseColor;
+			}  
+		</script>
+		<script>
+			//Grundeinstellung
+			var scene = new THREE.Scene();
+			scene.background = new THREE.Color().setHSL( 1, 1, 0.01 );
+			var camera = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, 1, 5000 );
+			var renderer = new THREE.WebGLRenderer( { antialias: true, alpha: true } );
+			renderer.shadowMap.enabled = true;
+			renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );
+			
+			//Variablen
+			var sonneRot, sonneRotMinusplus, texture, textureBump, textureSpec;
+			var sonnenStrahlPrev = new THREE.Vector3();
+			var  sonnenStrahlDir = 1;
+			var loader = new THREE.TextureLoader();
+			var prevTime;
+			var clock = new THREE.Clock();
+			
+			
+			//Ambientlight
+			var ambientLight = new THREE.AmbientLight( 0xffffff, 0.3 );
+			scene.add( ambientLight );
+			
+			var controls = new THREE.OrbitControls( camera, renderer.domElement);
+			camera.position.set( 0, 350, 0 );
+			//controls.autoRotate = true;
+			
+			
+			//Sonne
+			var noiseTexture = loader.load( 'images/textures/cloud.png' );
+			noiseTexture.wrapS = noiseTexture.wrapT = THREE.RepeatWrapping; 
+				
+			var lavaTexture = loader.load( 'images/textures/lava.jpg' );
+			lavaTexture.wrapS = lavaTexture.wrapT = THREE.RepeatWrapping; 
+			
+			// use "this." to create global object
+			this.customUniforms = {
+				baseTexture: 	{ type: "t", value: lavaTexture },
+				baseSpeed: 		{ type: "f", value: 0.05 },
+				noiseTexture: 	{ type: "t", value: noiseTexture },
+				noiseScale:		{ type: "f", value: 0.5337 },
+				alpha: 			{ type: "f", value: 1.0 },
+				time: 			{ type: "f", value: 1.0 }
+			};
+			
+			// create custom material from the shader code above
+			//   that is within specially labeled script tags
+			var customMaterial = new THREE.ShaderMaterial( 
+			{
+				uniforms: customUniforms,
+				vertexShader:   document.getElementById( 'vertexShader'   ).textContent,
+				fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+			}   );
+		
+			// other material properties
+			customMaterial.side = THREE.DoubleSide;
+		
+			// apply the material to a surface
+
+			var sonneGeometry = new THREE.SphereGeometry(20, 32, 32);
+			var sonne = new THREE.Mesh(sonneGeometry, customMaterial);
+			sonne.receiveShadow = false;
+			scene.add(sonne);
+			
+			//Sonnenstrahl
+			var sonnenStrahlMaterial2 = new THREE.SpriteMaterial({
+				map: loader.load('images/textures/glow.png'),
+				color: 0xff9933,
+				transparent: true,
+				opacity: 0.4,
+				blending: THREE.AdditiveBlending
+			})
+			var sonnenStrahl2 = new THREE.Sprite(sonnenStrahlMaterial2);
+			sonnenStrahl2.scale.set(100, 100, 1);
+			sonne.add(sonnenStrahl2);
+
+			var sonnenStrahlMaterial3= new THREE.MeshBasicMaterial({
+				color: 	 0xff6633,
+				side: THREE.BackSide,
+			});
+			var sonnenStrahl3 = new THREE.Mesh(sonneGeometry, sonnenStrahlMaterial3);
+			sonnenStrahl3.scale.multiplyScalar(1.01);
+			scene.add(sonnenStrahl3);
+
+
+			var sonnenStrahlGeometry = new THREE.SphereGeometry(20.1, 32, 32);
+			texture = loader.load('images/planets/sunmap5.jpg');
+			var sonnenStrahlMaterial = new THREE.MeshBasicMaterial({
+				map: texture, 
+				transparent: true, 
+				opacity: 0.3,
+				depthWrite: false
+				});
+			var sonnenStrahl = new THREE.Mesh(sonnenStrahlGeometry, sonnenStrahlMaterial);
+			//scene.add(sonnenStrahl);
+			sonnenStrahl.receiveShadow = false;
+			
+			
+			//Sonnenlicht
+			var lichtRadius = 0;
+			var lichtWinkel = 0;
+			var lichtPosX = Math.cos(lichtWinkel) * lichtRadius;
+				var lichtPosZ = Math.sin(lichtWinkel) * lichtRadius;
+				var sonnenlicht = new THREE.PointLight( 0xfcf3cf, 1, 0, 2);
+				sonnenlicht.position.set(lichtPosX,0,lichtPosZ);
+				sonnenlicht.castShadow = true;
+				
+				scene.add(sonnenlicht);
+			
+			//Merkur
+			texture = loader.load('images/planets/mercurymap.jpg');
+			textureBump = loader.load('images/planets/mercurybump.jpg');
+			var merkurGeometry = new THREE.SphereGeometry(1, 32, 32);
+			var merkurMaterial = new THREE.MeshPhongMaterial({
+				map: texture,
+				bumpMap: textureBump,
+				bumpScale: 0.5,
+			});
+			var merkur = new THREE.Mesh(merkurGeometry, merkurMaterial);
+			scene.add(merkur);
+			var merkurAbstand = 27;
+			var merkurWinkel = 0;
+			merkur.position.set(Math.cos(merkurWinkel)*merkurAbstand, 0, Math.sin(merkurWinkel)* merkurAbstand);
+			merkur.castShadow = true;
+			merkur.receiveShadow = true;
+			
+			//Venus
+			texture = loader.load('images/planets/venusmap.jpg');
+			textureBump = loader.load('images/planets/venusbump.jpg');
+			var venusGeometry = new THREE.SphereGeometry(2, 32, 32);
+			var venusMaterial = new THREE.MeshPhongMaterial({
+				map: texture,
+				bumpMap: textureBump,
+				bumpScale: 0.5
+			});
+			var venus = new THREE.Mesh(venusGeometry, venusMaterial);
+			scene.add(venus);
+			var venusAbstand = 32;
+			var venusWinkel = 60;
+			venus.position.set(Math.cos(venusWinkel)*venusAbstand, 0, Math.sin(venusWinkel)*venusAbstand);
+			venus.castShadow = true;
+			venus.receiveShadow = true;
+			
+			//Erde
+			texture = loader.load('images/planets/earthmap1k.jpg');
+			textureBump = loader.load('images/planets/earthbump1k.jpg');
+			textureSpec = loader.load('images/planets/earthspec1k.jpg');
+			var erdeRadius = 4;
+			var erdeGeometry = new THREE.SphereGeometry(erdeRadius, 32, 32);
+			var erdeMaterial = new THREE.MeshPhongMaterial({
+				map: texture, 
+				bumpMap: textureBump, 
+				bumpScale: 0.5, 
+				specularMap: textureSpec,
+				specular: 0x808080,
+			});
+			var erde = new THREE.Mesh(erdeGeometry, erdeMaterial);
+			scene.add(erde);
+			var erdeAbstand = 40;
+			var erdeWinkel = 230;
+			erde.position.set(Math.cos(erdeWinkel)*erdeAbstand, 0, Math.sin(erdeWinkel)*erdeAbstand);
+			erde.castShadow = true;
+			erde.receiveShadow = true;
+			
+			//Erde Wolken
+			texture = loader.load('images/planets/Clouds.jpg');
+			var erdeCloudGeometry = new THREE.SphereGeometry(4.05, 32, 32);
+			var erdeCloudMaterial = new THREE.MeshPhongMaterial({
+				map: texture,
+				side: THREE.DoubleSide,
+				opacity: 0.3,
+				transparent: true,
+				depthWrite: false
+			});
+			var erdeCloud = new THREE.Mesh(erdeCloudGeometry, erdeCloudMaterial);
+			scene.add(erdeCloud);
+			erdeCloud.position.set(Math.cos(erdeWinkel)*erdeAbstand, 0, Math.sin(erdeWinkel)*erdeAbstand);
+			
+			// Erde - Mond
+			texture = loader.load('images/planets/moonmap2k.jpg');
+			textureBump = loader.load('images/planets/moonbump2k.jpg');
+			var erdeMondGeometry = new THREE.SphereGeometry(0.5 , 32, 32)
+			var erdeMondMaterial = new THREE.MeshPhongMaterial({
+				map: texture,
+				bumpMap: textureBump,
+				bumpScale: 0.5
+			});
+			var erdeMond = new THREE.Mesh(erdeMondGeometry, erdeMondMaterial);
+			scene.add(erdeMond);
+			var erdeMondzuErdeAbstand = erdeRadius + 3;
+			var erdeMondAbstand = erdeAbstand + erdeMondzuErdeAbstand;
+			var erdeMondWinkel = erdeWinkel;
+			erdeMond.position.set(Math.cos(erdeMondWinkel) * erdeMondAbstand, 0, Math.sin(erdeMondWinkel) * erdeMondAbstand);
+			erdeMond.castShadow = true;
+			erdeMond.receiveShadow = true;
+			
+			//Mars
+			texture = loader.load('images/planets/marsmap.jpg');
+			textureBump = loader.load('images/planets/marsnormal.jpg');
+			var marsGeometry = new THREE.SphereGeometry(3, 32, 32);
+			var marsMaterial = new THREE.MeshPhongMaterial({
+				map: texture,
+				normalMap: textureBump,
+			
+			});
+			var mars = new THREE.Mesh(marsGeometry, marsMaterial);
+			scene.add(mars);
+			var marsAbstand = 51;
+			var marsWinkel = 90;
+			mars.position.set(Math.cos(marsWinkel)*marsAbstand, 0, Math.sin(marsWinkel)*marsAbstand);
+			mars.castShadow = true;
+			mars.receiveShadow = true;
+			
+			//Asteroidengürtel
+			texture = loader.load('images/planets/rock.jpg');
+			var asteroidRadius = 0.5;
+			var asteroidEnde = 360 - asteroidRadius;
+			var asteroidRadiusInnen = 60;
+			var asteroidRadiusAussen = 65;
+			var asteroidX;
+			var asteroidY;
+			var asteroidZ;
+			var asteroidChance;
+			var asteroidChance2;
+			var asteroidArray = [];
+			var asteroidZaehler = 0;
+			var asteroidZaehler2 = 0
+			var asteroidZaehler3 = [];
+			var asteroidArrayX = [];
+			var asteroidArrayY = [];
+			var asteroidArrayZ = [];
+			var asteroidWinkel = 0;
+			var asteroidWinkelArray = [];
+			
+			function createAsteroid() {
+				var asteroidGeometry = new THREE.IcosahedronGeometry(asteroidRadius * Math.random(), Math.random());
+				var asteroidMaterial = new THREE.MeshPhongMaterial({map: texture});
+				var asteroid = new THREE.Mesh(asteroidGeometry, asteroidMaterial);
+				scene.add(asteroid);
+				asteroid.position.set(asteroidX, 0 ,asteroidZ);
+			}
+			
+			function asteroidPosition(){
+				for (var j = 0; j <= (asteroidRadiusAussen - asteroidRadiusInnen); j += asteroidZufall()){
+					asteroidArray[asteroidZaehler] = [];
+					asteroidArrayX[asteroidZaehler] = [];
+					asteroidArrayY[asteroidZaehler] = [];
+					asteroidArrayZ[asteroidZaehler] = [];
+					asteroidWinkelArray[asteroidZaehler] = [];
+					for (var i = 0; i <= asteroidEnde; i += asteroidZufall()){
+						asteroidChance = Math.random();
+						if( asteroidChance <= 0.5) {
+						} else{
+							asteroidX = Math.cos(i) * (asteroidRadiusInnen + j);
+							asteroidZ = Math.sin(i) * (asteroidRadiusInnen + j);
+							asteroidChance2 = Math.random();
+							if(asteroidChance2 <= 0.33){
+								asteroidY = -5* Math.random();
+							} else if (asteroidChance2 <= 0.66){
+								asteroidY = 0;
+							} else {
+								asteroidY = 5* Math.random();
+							}
+							
+							var asteroidGeometry = new THREE.IcosahedronGeometry((asteroidRadius * Math.random()), );
+							var asteroidMaterial = new THREE.MeshPhongMaterial({map: texture});
+							var asteroid = new THREE.Mesh(asteroidGeometry, asteroidMaterial);
+							for (var o = 0, l = asteroidGeometry.vertices.length; o < l; o++) {
+								asteroidGeometry.vertices[o].x += asteroidRadius * -0.25 + Math.random()* asteroidRadius *0.5;
+								asteroidGeometry.vertices[o].y += asteroidRadius *-0.25 + Math.random()* asteroidRadius * 0.5;
+							}
+							scene.add(asteroid);
+							asteroid.position.set(asteroidX,asteroidY,asteroidZ);
+							asteroidArray[asteroidZaehler][asteroidZaehler2]= asteroid;
+							asteroidArrayX[asteroidZaehler][asteroidZaehler2]= asteroidX;
+							asteroidArrayY[asteroidZaehler][asteroidZaehler2]= asteroidY;
+							asteroidArrayZ[asteroidZaehler][asteroidZaehler2]= asteroidZ;
+							asteroidWinkelArray[asteroidZaehler][asteroidZaehler2] = i;
+							asteroidZaehler2++;
+							
+						}
+					}
+					asteroidZaehler3[asteroidZaehler] = asteroidZaehler2;
+					asteroidZaehler2 = 0;
+					asteroidZaehler++;
+				}
+			}
+			function asteroidZufall(){
+				return (asteroidRadius * (1 + Math.random()));
+			}
+			
+			asteroidPosition();
+			
+			//Jupiter
+			texture = loader.load('images/planets/jupitermap.jpg');
+			var jupiterGeometry = new THREE.SphereGeometry(8, 32, 32);
+			var jupiterMaterial = new THREE.MeshPhongMaterial({map: texture});
+			var jupiter = new THREE.Mesh(jupiterGeometry, jupiterMaterial);
+			scene.add(jupiter);
+			var jupiterAbstand = 73;
+			var jupiterWinkel = 330;
+			jupiter.position.set(Math.cos(jupiterWinkel)*jupiterAbstand, 0, Math.sin(jupiterWinkel) * jupiterAbstand);
+			jupiter.castShadow = true;
+			jupiter.receiveShadow = true;
+			
+			//Saturn
+			texture = loader.load('images/planets/saturnmap.jpg');
+			var saturnGeometry = new THREE.SphereGeometry(6, 32, 32);
+			var saturnMaterial = new THREE.MeshPhongMaterial({map: texture});
+			var saturn = new THREE.Mesh(saturnGeometry, saturnMaterial);
+			scene.add(saturn);
+			var saturnAbstand = 88;
+			var saturnWinkel = 150;
+			saturn.position.set(Math.cos(saturnWinkel)*saturnAbstand, 0, Math.sin(saturnWinkel) * saturnAbstand);
+			saturn.castShadow = true;
+			saturn.receiveShadow = true;
+			
+			//Saturnring
+			texture = loader.load('images/planets/saturnringcolor.jpg');
+			var saturnRingGeometry = new THREE.RingGeometry(7, 11, 32, 32);
+			var saturnRingMaterial = new THREE.MeshPhongMaterial({
+				map: texture,
+				side: THREE.DoubleSide,
+				opacity: 0.6,
+				transparent: true,
+				depthWrite: false
+			});
+			
+			var saturnRing = new THREE.Mesh(saturnRingGeometry, saturnRingMaterial);
+			scene.add(saturnRing);
+			saturnRing.position.set(Math.cos(saturnWinkel)*saturnAbstand, 0, Math.sin(saturnWinkel) * saturnAbstand);
+			saturnRing.rotateX(-0.78);
+			
+			//Uranus
+			texture = loader.load('images/planets/uranusmap.jpg');
+			var uranusGeometry = new THREE.SphereGeometry(5, 32, 32);
+			var uranusMaterial = new THREE.MeshPhongMaterial({map: texture});
+			var uranus = new THREE.Mesh(uranusGeometry, uranusMaterial);
+			scene.add(uranus);
+			var uranusAbstand = 103;
+			var uranusWinkel = 210;
+			uranus.position.set(Math.cos(uranusWinkel) * uranusAbstand, 0, Math.sin(uranusWinkel) * uranusAbstand);
+			uranus.castShadow = true;
+			uranus.receiveShadow = true;
+			
+			//Uranusring
+			texture = loader.load('images/planets/uranusringcolour.jpg');
+			var uranusRingGeometry = new THREE.RingGeometry(6, 11, 32, 32);
+			var uranusRingMaterial = new THREE.MeshPhongMaterial({
+				map: texture,
+				side: THREE.DoubleSide,
+				transparent: true,
+				opacity: 0.2,
+			});
+			var uranusRing = new THREE.Mesh(uranusRingGeometry, uranusRingMaterial);
+			scene.add(uranusRing);
+			uranusRing.position.set(Math.cos(uranusWinkel) * uranusAbstand, 0, Math.sin(uranusWinkel) * uranusAbstand);
+			uranusRing.castShadow = false;
+			uranusRing.receiveShadow = false;
+			
+			//Neptun
+			texture = loader.load('images/planets/neptunemap.jpg');
+			var neptunGeometry = new THREE.SphereGeometry(4, 32, 32);
+			var neptunMaterial = new THREE.MeshPhongMaterial({map: texture});
+			var neptun = new THREE.Mesh(neptunGeometry, neptunMaterial);
+			scene.add(neptun);
+			var neptunAbstand = 116;
+			var neptunWinkel = 300;
+			neptun.position.set(Math.cos(neptunWinkel) * neptunAbstand, 0, Math.sin(neptunWinkel) * neptunAbstand);
+			neptun.castShadow = true;
+			neptun.receiveShadow = true;
+			
+			//Pluto
+			texture = loader.load('images/planets/plutomap2k.jpg');
+			textureBump = loader.load('images/planets/plutobump2k.jpg');
+			var plutoGeometry = new THREE.SphereGeometry(1, 32, 32);
+			var plutoMaterial = new THREE.MeshPhongMaterial({
+				map: texture,
+				bumpMap: textureBump,
+				bumpScale: 0.5
+			});
+			var pluto = new THREE.Mesh(plutoGeometry, plutoMaterial);
+			scene.add(pluto);
+			var plutoAbstand = 125;
+			var plutoWinkel = 190;
+			pluto.position.set(Math.cos(plutoWinkel) * plutoAbstand, 0, Math.sin(plutoWinkel) * plutoAbstand);
+			pluto.castShadow = true;
+			pluto.receiveShadow = true;
+			
+			//Sterne
+			var sternArray = [];
+			function createSterne(){
+			for (var i = 1; i <= 10000; i++){
+				var sternGeometry = new THREE.IcosahedronBufferGeometry(1* Math.random(), 0);
+				var sternMaterial = new THREE.MeshBasicMaterial({
+					color: 0xffffff, 
+					transparent: true,
+					opacity: 1.0
+				});
+				var stern = new THREE.Mesh(sternGeometry, sternMaterial);
+				scene.add(stern);
+				var x = [];
+				x = sternbereich();
+				stern.position.set(x[0], x[1], x[2]);
+				sternArray[i] = stern;
+				
+				}
+			}
+				
+			createSterne();
+			
+			//Zufallsgenerator +-1
+			function minusplus() {
+				var i = Math.random();
+				if (i < 0.5) {
+				return -1;
+				} else {
+				return 1;
+				}
+			}
+			
+			//Sternenbereich
+			function sternbereich(){
+				var x = [];
+				var l = 1000;
+				x[0] = minusplus()* l * Math.random();
+				x[1] = minusplus()* l* Math.random();
+				x[2] = minusplus()* l * Math.random();
+				var g = 500;
+				
+				while (x[0] < g && x[0] >-g && x[1] < g && x[1] > -g && x[2] < g && x[2] > -g){
+					if ( x[0] < g || x[0] > -g) {
+						x[0] = minusplus()* l * Math.random();
+					} else if ( x[1] < g || x[1] > -g){
+						x[1] = minusplus()* l * Math.random();
+					} else if ( x[2] < g || x[2] > -g)
+						x[2] = minusplus()* l * Math.random();
+				} return x;
+			}
+			
+			//Sternschimmern
+			var sternCase = 1;
+			var sternRichtung = 0;
+			var sternOpacity = 0.05;
+			function sternSchimmer() {
+				if( sternCase == 1){
+					if(sternArray[3333].material.opacity <= 0){
+						sternCase = 2;
+						return;
+					} else {
+						for(var i = 1; i <= 3333; i++){
+							sternArray[i].material.opacity -= sternOpacity;
+						}
+					}
+				} else if (sternCase == 2){
+					if(sternArray[3333].material.opacity >= 1){
+						sternCase = 3;
+						return;
+					} else {
+						for(var i = 1; i <= 3333; i++){
+							sternArray[i].material.opacity += sternOpacity;
+						}
+					}
+				} else if( sternCase == 3){
+					if(sternArray[6666].material.opacity <= 0){
+						sternCase = 4;
+						return;
+					} else {
+						for(var i = 3334; i <= 6666; i++){
+							sternArray[i].material.opacity -= sternOpacity;
+						}
+					}
+				} else if (sternCase == 4){
+					if(sternArray[6666].material.opacity >= 1){
+						sternCase = 5;
+						return;
+					} else {
+						for(var i = 3334; i <= 6666; i++){
+							sternArray[i].material.opacity += sternOpacity;
+						}
+					}
+				}else if( sternCase == 5){
+					if(sternArray[10000].material.opacity <= 0){
+						sternCase = 6;
+						return;
+					} else {
+						for(var i = 6667; i <= 10000; i++){
+							sternArray[i].material.opacity -= sternOpacity;
+						}
+					}
+				} else if (sternCase == 6){
+					if(sternArray[10000].material.opacity >= 1){
+						sternCase = 1;
+						return;
+					} else {
+						for(var i = 6667; i <= 10000; i++){
+							sternArray[i].material.opacity += sternOpacity;
+						}
+					}
+				}
+			}
+			
+			//Planetenbewegung - Winkelgeschwindigkeit
+			function planetenBewegung() {
+				if(merkurWinkel == -360) {
+					merkurWinkel = 0;
+				} else {
+					merkurWinkel -= 0.005;
+				} if(venusWinkel == -360) {
+					venusWinkel = 0;
+				} else {
+					venusWinkel -= 0.005;
+				} if(erdeWinkel == -360) {
+					erdeWinkel = 0;
+				} else {
+					erdeWinkel -= 0.005;
+				} if(erdeMondWinkel == -360) {
+					erdeMondWinkel = 0;
+				} else {
+					erdeMondWinkel -= 0.05;
+				} if(marsWinkel == -360) {
+					marsWinkel = 0;
+				} else {
+					marsWinkel -= 0.005;
+				} if(jupiterWinkel == -360) {
+					jupiterWinkel = 0;
+				} else {
+					jupiterWinkel -= 0.005;
+				} if(saturnWinkel == -360) {
+					saturnWinkel = 0;
+				} else {
+					saturnWinkel -= 0.005;
+				} if(uranusWinkel == -360) {
+					uranusWinkel = 0;
+				} else {
+					uranusWinkel -= 0.005;
+				} if(neptunWinkel == -360) {
+					neptunWinkel = 0;
+				} else {
+					neptunWinkel -= 0.005;
+				} if(plutoWinkel == -360) {
+					plutoWinkel = 0;
+				} else {
+					plutoWinkel -= 0.005;
+				}  for( var i = 0 ; i <= asteroidZaehler-1 ; i++){
+						for(var j = 0; j <= asteroidZaehler3[i] -1; j++){
+							if(asteroidWinkelArray[i][j] <= -360){
+								asteroidWinkelArray[i][j] = 0;
+							} else {
+								asteroidWinkelArray[i][j] -= 0.005;
+							}
+						}
+					}
+				}
+			
+			//Lensflare
+				var textureFlare0 = loader.load( 'js/examples/textures/lensflare/lensflare0.png' );
+				var textureFlare3 = loader.load( 'js/examples/textures/lensflare/lensflare3.png' );
+				var textureLight = loader.load('images/planets/universe6.jpg');
+
+				addLight( 100, 0.55, 0.9, 0.5, 0, 0, 1000 );
+				addLight( 100, 0.08, 0.8, 0.5,    1000, 1000 , 1000 );
+				addLight( 100, 0.995, 0.5, 0.9, 1000, -500, 0);
+				addLight( 100, 0.82, 1.0, 0.5, -1000, 0,  0);
+				addLight( 100, 0.1, 1, 0.2, 0, 600, -1000 );
+				
+				
+				
+				function addLight( size, h, s, l, x, y, z ) {
+
+					var light = new THREE.PointLight( 0xffffff, 1.5, 100 );
+					light.color.setHSL( h, s, l );
+					light.position.set( x, y, z );
+					scene.add( light );
+
+					var lensflare = new THREE.Lensflare();
+					lensflare.addElement( new THREE.LensflareElement( textureFlare0, size, 0, light.color ) );
+					/*lensflare.addElement( new THREE.LensflareElement( textureFlare3, 20, 0.6 ) );
+					lensflare.addElement( new THREE.LensflareElement( textureFlare3, 30, 0.7 ) );
+					lensflare.addElement( new THREE.LensflareElement( textureFlare3, 50, 0.9 ) );
+					lensflare.addElement( new THREE.LensflareElement( textureFlare3, 30, 1 ) );
+					*/light.add( lensflare );
+
+
+				}
+				
+				function addLight2( textureLight, size, h, s, l, x, y, z ) {
+
+					var light = new THREE.PointLight( 0xffffff, 1.5, 100 );
+					light.color.setHSL( h, s, l );
+					light.position.set( x, y, z );
+					scene.add( light );
+
+					var lensflare = new THREE.Lensflare();
+					lensflare.addElement( new THREE.LensflareElement( textureLight, size, 0, light.color ) );
+					
+					light.add( lensflare );
+				}
+				
+				
+				
+			//Hintergrund
+				/*texture = loader.load('images/planets/universe8.jpg');
+				var background1Geometry = new THREE.PlaneGeometry(2000,2000);
+				var background1Material = new THREE.MeshLambertMaterial({
+				map: texture,
+				side: THREE.DoubleSide,
+				transparent: true,
+				opacity: 0.3
+				});
+				var background1 = new THREE.Mesh(background1Geometry, background1Material);
+				scene.add(background1);
+				background1.position.set(0, 0 , 3000);
+				//background1.rotateX(Math.PI / 2); */
+
+				
+				
+				
+				
+				
+				
+				
+		//Animate/Loop
+			function animate() {
+				var delta = clock.getDelta();
+				customUniforms.time.value += delta;
+				requestAnimationFrame( animate );
+
+				//Update von control(nötig wenn Autorotate aktiv ist)
+				controls.update();
+				
+				//Sonnenstrahlbewegung
+				sonneRot = Math.random();
+				sonneRotMinusplus = minusplus();
+				if (sonneRot < 0.33){
+					if(sonneRotMinusplus == 1){
+						sonnenStrahl.rotation.x += 0.001
+					} else {
+						sonnenStrahl.rotation.x -= 0.001
+					}
+				} else if (sonneRot < 0.67 && sonneRot > 0.33){
+					if( sonneRotMinusplus == 1){
+					sonnenStrahl.rotation.y += 0.005
+					} else {
+					sonnenStrahl.rotation.y -= 0.005
+					}
+				} else {
+					if(sonneRotMinusplus == 1){
+					sonnenStrahl.rotation.z += 0.005
+					} else {
+					sonnenStrahl.rotation.z -= 0.005
+					}
+				}
+				
+				sonnenStrahlPrev = sonnenStrahl2.scale;
+				if( sonnenStrahlDir == 1 ){
+					sonnenStrahl2.scale.set(sonnenStrahl2.scale.x + 1, sonnenStrahl2.scale.y + 1, 1);
+				} if (sonnenStrahlPrev.x >= 150){
+					sonnenStrahlDir = 0;
+				}  if (sonnenStrahlDir == 0 ){
+					sonnenStrahl2.scale.set(sonnenStrahl2.scale.x -1, sonnenStrahl2.scale.y -1, 1);
+				} if(sonnenStrahlPrev.x <= 100){
+					sonnenStrahlDir = 1;
+				}
+				
+				
+		
+				//Planetenbewegung
+				planetenBewegung();
+			
+				merkur.position.set(merkurAbstand * Math.cos(merkurWinkel),0, merkurAbstand * Math.sin(merkurWinkel));
+				venus.position.set(venusAbstand * Math.cos(venusWinkel*0.9), 0, venusAbstand * Math.sin(venusWinkel*0.9));
+				erde.position.set(erdeAbstand * Math.cos(erdeWinkel*0.8), 0, erdeAbstand * Math.sin(erdeWinkel*0.8));
+				erdeCloud.position.set(erdeAbstand * Math.cos(erdeWinkel*0.8), 0, erdeAbstand * Math.sin(erdeWinkel*0.8));
+				erdeMond.position.set(
+					erdeAbstand * Math.cos(erdeWinkel *0.8)+ erdeMondzuErdeAbstand * Math.cos(erdeMondWinkel),
+					0,
+					erdeAbstand * Math.sin(erdeWinkel * 0.8) + erdeMondzuErdeAbstand * Math.sin(erdeMondWinkel));
+				mars.position.set(marsAbstand * Math.cos(marsWinkel*0.7), 0, marsAbstand * Math.sin(marsWinkel*0.7));
+				jupiter.position.set(jupiterAbstand * Math.cos(jupiterWinkel * 0.6), 0, jupiterAbstand * Math.sin(jupiterWinkel * 0.6));
+				saturn.position.set(saturnAbstand * Math.cos(saturnWinkel * 0.5), 0, saturnAbstand * Math.sin(saturnWinkel * 0.5));
+				saturnRing.position.set(saturnAbstand * Math.cos(saturnWinkel * 0.5), 0, saturnAbstand * Math.sin(saturnWinkel * 0.5));
+				uranus.position.set(uranusAbstand * Math.cos(uranusWinkel * 0.4), 0, uranusAbstand * Math.sin(uranusWinkel * 0.4));
+				uranusRing.position.set(uranusAbstand * Math.cos(uranusWinkel * 0.4), 0, uranusAbstand * Math.sin(uranusWinkel * 0.4));
+				neptun.position.set(neptunAbstand * Math.cos(neptunWinkel * 0.3), 0, neptunAbstand * Math.sin(neptunWinkel * 0.3));
+				pluto.position.set(plutoAbstand * Math.cos(plutoWinkel * 0.2), 0, plutoAbstand * Math.sin(plutoWinkel * 0.2));
+				
+				//Asteroidengürtelbewegung
+				for( var i = 0 ; i <= asteroidZaehler-1 ; i++){
+					for(var j = 0; j <= asteroidZaehler3[i] -1; j++){
+						var radius = Math.sqrt(asteroidArrayX[i][j] * asteroidArrayX[i][j] + asteroidArrayZ[i][j]* asteroidArrayZ[i][j]);
+						asteroidArray[i][j].position.set( radius * Math.cos(asteroidWinkelArray[i][j]),asteroidArrayY[i][j], radius * Math.sin(asteroidWinkelArray[i][j]));
+					}
+				}
+				
+				//Planetenrotation
+				merkur.rotation.y += 0.005;
+				venus.rotation.y += 0.005;
+				erde.rotation.y += 0.005;
+				erdeCloud.rotation.y += 0.01;
+				mars.rotation.y += 0.005;
+				jupiter.rotation.y += 0.005;
+				saturn.rotation.y += 0.005;
+				saturnRing.rotation.z += 0.005;
+				//saturnRing.rotation.y += 0.005;
+				uranus.rotation.y += 0.005;
+				uranusRing.rotation.y += 0.005;
+				neptun.rotation.y += 0.005;
+				pluto.rotation.y += 0.005;
+				
+				//Sternschimmerfunktion
+				sternSchimmer();
+				
+				//Schluss
+				renderer.render( scene, camera );
+				prevTime = time;
+			}
+			animate();
+		</script>
+	</body>
+</html>
+
+
+		
+		
+		
+		
+	
