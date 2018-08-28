@@ -23,9 +23,9 @@
 	Physijs.scripts.worker = 'js/libs/physijs_worker.js';
 	Physijs.scripts.ammo = 'ammo.js';
 	
-	var scene, camera, renderer, controls;
+	var scene, camera, renderer, controls; 
 		var pointLightDir;
-		var cube, floor, floor2, pointLight, podestObj; //Objekte
+		var cube, floor, floor2, pointLight, podestObj, wallnorm; //Objekte
 		var wall = [];
 		var bar = [];
 		var windows = [];
@@ -202,26 +202,34 @@
 			
 			//Walls
 				//wall (door)
+				var wallwraps;
+				var wallwrapt;
+
 				var wallStyle = {
 					roughness: 0.8,
 					color: 0xffffff,
 					metalness: 0.2,
-					bumpScale: 0.0005};
+					bumpScale: 0.5};
 
 				var wallGeo0 = new THREE.BoxBufferGeometry(45, 25, 1);
 				var wallMat = new THREE.MeshStandardMaterial({wallStyle});
+				var wallMatNorm = new THREE.MeshStandardMaterial({
+					map: textureLoader.load('images/textures/stonewall2.jpg'),
+					normalMap: textureLoader.load('images/textures/stonewall2norm.jpg')
+				});
 
-				textureLoader.load('images/textures/stonewall.jpg', function( map){
+				textureLoader.load('images/textures/stonewall2.jpg', function( map){
 					map.wrapS = THREE.RepeatWrapping;
 					map.wrapT = THREE.RepeatWrapping;
 					map.anisotropy = 4;
-					map.repeat.set( 5, 12 );
+					map.repeat.set( 10, 12 );
 					wallMat.map = map;
-					wallMat.roughnessMap = map;
 					wallMat.needsUpdate = true;
 				});
 
 				wall[0] = new Physijs.BoxMesh( wallGeo0, wallMat);
+				wallnorm = new Physijs.BoxMesh( wallGeo0, wallMatNorm);
+				houseGroup.add(wallnorm);
 				wall[0].position.set(27.5, 12.5, 50);
 				wall[0].receiveShadow = true;
 				
