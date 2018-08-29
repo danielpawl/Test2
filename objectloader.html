@@ -16,16 +16,19 @@
         <script src="js\src\loaders\TextureLoader.js" ></script>
         <script src="js\examples\js\loaders\OBJLoader.js"></script>
         <script src="js\examples\js\loaders\MTLLoader.js"></script>
+        <script src="js\examples\js\loaders\TGALoader.js"></script>
+        
         <script>
         
         var scene, renderer, render, camera, controls;
+        var textureLoader = new THREE.TextureLoader();
 
         init();
 
         function init(){
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x000000);
-            scene.fog = new THREE.Fog(0x000000, 100, 400);
+            scene.background = new THREE.Color(0xffffff);
+            //scene.fog = new THREE.Fog(0x000000, 100, 800);
 
             renderer = new THREE.WebGLRenderer({antialias: true});
             renderer.physicallyCorrectLights = true;
@@ -40,21 +43,31 @@
 
             camera = new THREE.PerspectiveCamera(30, window.innerWidth/ window.innerHeight, 1, 2500);
             controls = new THREE.OrbitControls( camera, renderer.domElement);
-            camera.position.set(30, 200, 0);
+            camera.position.set(100, 500, 100);
             camera.lookAt(scene.position);
 
-            var ambi = new THREE.AmbientLight(0xffeecc, 0.5);
+            var ambi = new THREE.AmbientLight(0xffeecc, 1);
             scene.add(ambi);
             
             //Floor
             var floorGeo = new THREE.PlaneBufferGeometry(200, 200);
             var floorMat = new THREE.MeshStandardMaterial({color: 0xffffff});
             var floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.receiveShadow = true;
             scene.add(floor);
             floor.rotation.x = -Math.PI /2.0;
+            floor.position.y = -200;
+
+            var light = new THREE.PointLight(0xffff00);
+            light.castShadow=true;
+            scene.add(light);
+            light.position.set(0 , 50, 40);
             
-            objectLoader();
-            objectLoader2();
+
+
+            //objectLoader();
+           // objectLoader2();
+            objectLoader3();
 
             render();
 
@@ -65,32 +78,91 @@
 			renderer.render( scene, camera );
         }
 
-        function objectLoader(){
+       /* function objectLoader(){
             var objLoader = new THREE.OBJLoader();
             var mtlLoader = new THREE.MTLLoader();
-            mtlLoader.load('models/obj/batman2/source/CV_DLC8_Batman_Beyond/CV_DLC8_Batman_Beyond.mtl', function(materials){
+            mtlLoader.setTexturePath('models/obj/justiceleague/textures/')
+           
+            mtlLoader.load('models/obj/justiceleague/source/Superman_(BvS)/mtl2.mtl', function(materials){
                 materials.isMultiMaterial = true;
                 materials.preload();
                 objLoader.setMaterials(materials);  
-                objLoader.load('models/obj/batman2/source/CV_DLC8_Batman_Beyond/CV_DLC8_Batman_Beyond.obj', function(obj){
+                objLoader.load('models/obj/justiceleague/source/Superman_(BvS)/untitled.obj', function(obj){
+                    obj.position.set(0, -30, 0);
                     obj.scale.set(30, 30, 30);
                     scene.add(obj);
                 })
             })
-        }
+        } */
         
-        function objectLoader2(){
+        /*function objectLoader2(){
         var objLoader = new THREE.OBJLoader();
         var mtlLoader = new THREE.MTLLoader();
         
             objLoader.load('models/obj/skull/source/craneo.OBJ', function(obj){
-                obj.scale.set(30, 30, 30);
-                obj.position.set(0, 30, 0);
-                scene.add(obj);
+                obj.traverse( function ( node ) {
 
+                if ( node.isMesh ){
+                    node.material.map = textureLoader.load('models/obj/skull/textures/difuso_flip_oscuro.jpg');
+                    node.material.normalMap = textureLoader.load('models/obj/skull/textures/normal_flip_3.jpg');
+                    v2 = new THREE.Vector2(1, 1);
+                    node.material.normalScale = v2;
+                } 
+
+                } );
+                obj.scale.set(5, 5, 5);
+                obj.position.set(50, 30, 0);
+                scene.add(obj);
+                
+            },
+            function ( xhr ) {
+
+            console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+
+            },
+            // called when loading has errors
+            function ( error ) {
+
+            console.log( 'An error happened' );
             });
-                    
+            
+         } */
+            function objectLoader3(){
+            var objLoader = new THREE.OBJLoader();
+            var mtlLoader = new THREE.MTLLoader();
+            var tgaLoader = new THREE.TGALoader();
+            mtlLoader.setTexturePath('models/obj/batman2/textures/')
+           
+            mtlLoader.load('models/obj/batman2/source/Batman2.mtl', function(materials){
+                materials.isMultiMaterial = true;
+                materials.preload();
+                objLoader.setMaterials(materials);  
+                objLoader.load('models/obj/batman2/source/Batman.obj', function(obj){
+                    obj.traverse( function ( node ) {
+
+                    if ( node instanceof THREE.Mesh){
+                        node.castShadow = true;
+                    } 
+                    obj.position.set(0, -200, 0);
+                })
+                   // obj.scale.set(1000, 1000, 1000);
+                    scene.add(obj);
+                },
+            function ( xhr ) {
+
+            console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+
+            },
+            // called when loading has errors
+            function ( error ) {
+
+            console.log( 'An error happened' )
+            })
+            })
+            
         }
+                    
+        
 
 
         

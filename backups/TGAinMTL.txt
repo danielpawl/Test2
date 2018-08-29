@@ -1,0 +1,47 @@
+loadTexture: function ( url, mapping, onLoad, onProgress, onError ) {
+
+		var texture;
+		var loader = THREE.Loader.Handlers.get( url );
+		var manager = ( this.manager !== undefined ) ? this.manager : THREE.DefaultLoadingManager;
+		if(checkFile(loader) == false){
+			if ( loader === null) {
+
+				loader = new THREE.TextureLoader( manager );
+
+			} 
+
+			if ( loader.setCrossOrigin ) loader.setCrossOrigin( this.crossOrigin );
+			texture = loader.load( url, onLoad, onProgress, onError );
+
+			if ( mapping !== undefined ) texture.mapping = mapping;
+			}
+		if(checkFile(loader)== true){
+			if ( loader === null) {
+
+				loader = new THREE.TGALoader( manager );
+
+			} 
+
+			if ( loader.setCrossOrigin ) loader.setCrossOrigin( this.crossOrigin );
+			texture = loader.load( url, onLoad, onProgress, onError );
+
+			if ( mapping !== undefined ) texture.mapping = mapping;
+		} 
+			return texture;
+		},
+
+
+	
+	checkFile: function(file_name) {
+		// Die erlaubten Dateiendungen
+		var allowed_extensions = new Array('tga');
+
+		// Dateiendung der Datei
+		var extension = file_name.split('.');
+		extension = extension[extension.length - 1];
+
+		for (var k in allowed_extensions) {
+			if (allowed_extensions[k] == extension) return true;
+		}
+		return false;
+		}

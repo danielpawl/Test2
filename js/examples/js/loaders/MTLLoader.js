@@ -541,20 +541,21 @@ THREE.MTLLoader.MaterialCreator.prototype = {
 		var texture;
 		var loader = THREE.Loader.Handlers.get( url );
 		var manager = ( this.manager !== undefined ) ? this.manager : THREE.DefaultLoadingManager;
+		
+			if ( loader === null) {
 
-		if ( loader === null ) {
+				loader = new THREE.TextureLoader( manager );
 
-			loader = new THREE.TextureLoader( manager );
+			} 
 
-		}
+			if ( loader.setCrossOrigin ) loader.setCrossOrigin( this.crossOrigin );
+			texture = loader.load( url, onLoad, onProgress, onError );
 
-		if ( loader.setCrossOrigin ) loader.setCrossOrigin( this.crossOrigin );
-		texture = loader.load( url, onLoad, onProgress, onError );
+			if ( mapping !== undefined ) texture.mapping = mapping;
+			
+		
+			return texture;
+		},
 
-		if ( mapping !== undefined ) texture.mapping = mapping;
-
-		return texture;
-
-	}
 
 };

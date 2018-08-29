@@ -6,6 +6,7 @@
 	<script src="js\examples\js\controls\OrbitControls.js" ></script>
 	<script src="js\examples\js\controls\PointerLockControls.js" ></script>
 	<script src="js\src\loaders\TextureLoader.js" ></script>
+	<script src="js\examples\js\loaders\ColladaLoader.js" ></script>
 
 	<div id="blocker">
 
@@ -34,9 +35,11 @@
 		var hitObj = [];
 		var hitUnderObj = [];
 		var me, playerGeo, playerMat;
+		var flashVector = new THREE.Vector3();
 
 		
 		var player = {height: 10, speed: 1, arrowspeed: 0.01};
+		var flash, flashsource;
 		var podest = {height: 5 , width: 100, length: 100};
 
 		var keyboard= {};
@@ -477,6 +480,17 @@
 			cube.castShadow = true;
 			hitObj.push(cube);
 			hitObj.push(houseGroup);
+			
+			//Flashlight - flash = object, flashsource = lightsource
+			flashlight(); //creates Flashlight "flash"
+			flashsource = new THREE.SpotLight(0xffffff, 2, 200, 0.5, 0.25, 2);
+			flashsource.castShadow = true;
+			scene.add(flashsource);
+			controls.getObject().add(flashsource);
+			flashsource.position.set(2, -2, -10.5);
+			
+			
+			
 		
 		//player
 			/* playerGeo = new THREE.BoxGeometry(5, 10, 5, 8, 8, 8);
@@ -488,7 +502,7 @@
 			me = new THREE.Mesh(playerGeo,playerMat);
 			scene.add(me);
 			me.position.set(camera.position.x, camera.position.y, camera.position.z); */
-
+			
 
 			animate();
 		
@@ -505,6 +519,11 @@
 				requestAnimationFrame( animate );
 				renderer.render( scene, camera );
 				scene.simulate();
+				
+				if('undefined' !== typeof flash){
+
+				}
+
 
 				//player
 				//me.position.set(controls.getObject().position.x, controls.getObject().position.y, controls.getObject().position.z);
@@ -635,6 +654,50 @@
 
 		window.addEventListener('keydown', keyDown, false);
 		window.addEventListener('keyup', keyUp, false);
+
+		function flashlight(){
+			var colladaLoader = new THREE.ColladaLoader();
+			var textureLoader = new THREE.TextureLoader();
+			var dae;
+			colladaLoader.load('models/dae/flashlight/source/model.dae', function(collada){
+				dae = collada.scene;
+				dae.traverse( function ( node ) {
+					if ( node instanceof THREE.Mesh){
+						node.material.map = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_albedo.jpeg');
+						node.material.normalMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_normal.png');
+						node.material.aoMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_AO.jpeg');
+						node.material.emissiveMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_emissive.jpeg');
+						node.material.metalnessMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_metallic.jpeg');
+						node.material.roughnessMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_roughness.jpeg');
+					} 
+				}); 
+
+
+				dae.scale.set(3, 3 , 3);
+				scene.add(dae);
+				flash = dae;
+				controls.getObject().add(dae);
+				dae.rotation.y += Math.PI / 2.0;
+				dae.position.set(2, -2 , -10);
+		
+			},
+            function ( xhr ) {
+
+            console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+			
+
+            },
+            // called when loading has errors
+			
+            function ( error ) {
+
+            console.log( 'An error happened' )
+            })
+			
+            }
+            
+        
+		
 	
 	
 	
