@@ -1,5 +1,59 @@
 <!DOCTYPE html>
+<head>
+	<style>
+		html, body {
+			width: 100%;
+			height: 100%;
+		}
 
+		body {
+			background-color: #ffffff;
+			margin: 0;
+			overflow: hidden;
+			font-family: arial;
+		}
+
+		#blocker {
+
+			position: absolute;
+
+			width: 100%;
+			height: 100%;
+
+			background-color: rgba(0,0,0,0.5);
+
+		}
+
+		#instructions {
+
+			width: 100%;
+			height: 100%;
+
+			display: -webkit-box;
+			display: -moz-box;
+			display: box;
+
+			-webkit-box-orient: horizontal;
+			-moz-box-orient: horizontal;
+			box-orient: horizontal;
+
+			-webkit-box-pack: center;
+			-moz-box-pack: center;
+			box-pack: center;
+
+			-webkit-box-align: center;
+			-moz-box-align: center;
+			box-align: center;
+
+			color: #ffffff;
+			text-align: center;
+
+			cursor: pointer;
+
+		}
+
+	</style>
+</head>
 <html>
 	<script src="js/build/three.js"></script>
 	<script  src="js/libs/physi.js"></script>
@@ -7,6 +61,8 @@
 	<script src="js\examples\js\controls\PointerLockControls.js" ></script>
 	<script src="js\src\loaders\TextureLoader.js" ></script>
 	<script src="js\examples\js\loaders\ColladaLoader.js" ></script>
+	<script src="js\examples\js\loaders\GLTFLoader.js"></script>
+	<script src="js\examples\js\loaders\OBJLoader.js"></script>
 
 	<div id="blocker">
 
@@ -35,11 +91,16 @@
 		var hitObj = [];
 		var hitUnderObj = [];
 		var me, playerGeo, playerMat;
-		var flashVector = new THREE.Vector3();
+		var texture;
+		
+		var gltfLoader = new THREE.GLTFLoader();
 
 		
 		var player = {height: 10, speed: 1, arrowspeed: 0.01};
 		var flash, flashsource;
+		var flashVector = new THREE.Vector3();
+		var pennywise;
+
 		var podest = {height: 5 , width: 100, length: 100};
 
 		var keyboard= {};
@@ -48,11 +109,16 @@
 		var moveLeft = false;
 		var moveRight = false;
 		var canJump = false;
+		var flashOn = false;
 		var prevTime = performance.now();
 		var velocity = new THREE.Vector3();
 		var direction = new THREE.Vector3();
 		var vertex = new THREE.Vector3();
 		var color = new THREE.Color();
+
+		var listener = new THREE.AudioListener();
+		var sound = new THREE.Audio( listener );
+		
 
 		var blocker = document.getElementById( 'blocker' );
 		var instructions = document.getElementById( 'instructions' );
@@ -99,8 +165,8 @@
 		//Init
 		function init() {
 			scene = new Physijs.Scene();
-			scene.background = new THREE.Color(0x070012);
-			scene.fog = new THREE.Fog( 0x070012, 50, 400);
+			scene.background = new THREE.Color(0x000000); //0x070012
+			scene.fog = new THREE.Fog( 0x000000, 50, 400);
 			
 			camera = new THREE.PerspectiveCamera(30, window.innerWidth/ window.innerHeight, 1, 2500);
 			
@@ -123,28 +189,36 @@
 			window.addEventListener( 'resize', onWindowResize, false );
 
 			raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1 , 0), 0, 10);
+
+			var textureLoader = new THREE.TextureLoader();
 			
 	
 			
 			//Licht
-			var hemiLight = new THREE.HemisphereLight( 0xddeeff, 0x0f0e0d, 0.5 );
-				scene.add( hemiLight );
+			var ambiLight = new THREE.AmbientLight( 0xddeeff, 0.01 );
+				scene.add( ambiLight );
 
 			pointLight = new THREE.PointLight(0xffee88, 200, 100, 2);
 			scene.add(pointLight);
-			pointLight.position.set(0, 1, 0);
+			pointLight.position.set(0, 15, 0);
 			pointLight.castShadow = true;
 			pointLightDir = 1;
 
-			var dirLight = new THREE.DirectionalLight(0xffffff, 0.03);
+			var pointLightTrees = new THREE.SpotLight(0xffee88, 50000, 800, 1, 1 , 2);
+			scene.add(pointLightTrees);
+			pointLightTrees.position.set(0, 50, -600);
+			pointLightTrees.castShadow = true;
+			pointLightTrees.shadowDarkness = 10;
+
+			/*var dirLight = new THREE.DirectionalLight(0xffffff, 0.03);
 			scene.add(dirLight);
-			dirLight.position.set(0 , 200, -200);
+			dirLight.position.set(0 , 200, -500);
 			dirLight.castShadow = true;
 			dirLight.shadowDarkness = 1;
 			dirLight.shadow.mapSize.width= 2048;
 			dirLight.shadow.mapSize.height= 2048;
 			dirLight.shadow.camera.near = 10;
-			dirLight.shadow.camera.far = 2100;
+			dirLight.shadow.camera.far = 2100; */
 			
 			
 		
@@ -156,6 +230,22 @@
 			var podestMat = new THREE.MeshStandardMaterial({
 
 			});
+			textureLoader.load('images/textures/stonewall1.jpg', function( map){
+				map.wrapS = THREE.RepeatWrapping;
+				map.wrapT = THREE.RepeatWrapping;
+				map.anisotropy = 4;
+				map.repeat.set( 16, 2 );
+				podestMat.map = map;
+
+				texture = textureLoader.load('images/textures/stonewall1norm.jpg'); //normal map
+				texture.wrapS =THREE.RepeatWrapping;
+				texture.wrapT = THREE.RepeatWrapping;
+				texture.anisotropy = 4;
+				texture.repeat.set(  16, 2);
+				podestMat.normalMap = texture;
+				podestMat.needsUpdate = true; 
+			});
+
 			podestObj = new Physijs.BoxMesh(podestGeo, podestMat,0);
 			podestObj.position.set(0, 2.5 , 0);
 			scene.add(podestObj);
@@ -205,67 +295,80 @@
 			
 			//Walls
 				//wall (door)
-				var wallwraps;
-				var wallwrapt;
+				var wallwraps = 12;
+				var wallwrapt = 8;
 
 				var wallStyle = {
 					roughness: 0.8,
 					color: 0xffffff,
-					metalness: 0.2,
+					metalness: 0.0,
 					bumpScale: 0.5};
 
 				var wallGeo0 = new THREE.BoxBufferGeometry(45, 25, 1);
 				var wallMat = new THREE.MeshStandardMaterial({wallStyle});
-				var wallMatNorm = new THREE.MeshStandardMaterial({
-					map: textureLoader.load('images/textures/stonewall2.jpg'),
-					normalMap: textureLoader.load('images/textures/stonewall2norm.jpg')
-				});
-
+				
 				textureLoader.load('images/textures/stonewall2.jpg', function( map){
-					map.wrapS = THREE.RepeatWrapping;
+					map.wrapS = THREE.RepeatWrapping; //color map
 					map.wrapT = THREE.RepeatWrapping;
 					map.anisotropy = 4;
-					map.repeat.set( 10, 12 );
+					map.repeat.set( wallwraps, wallwrapt );
 					wallMat.map = map;
+
+					texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
+					texture.wrapS =THREE.RepeatWrapping;
+					texture.wrapT = THREE.RepeatWrapping;
+					texture.anisotropy = 4;
+					texture.repeat.set( wallwraps, wallwrapt);
+					wallMat.normalMap = texture;
 					wallMat.needsUpdate = true;
 				});
 
 				wall[0] = new Physijs.BoxMesh( wallGeo0, wallMat);
-				wallnorm = new Physijs.BoxMesh( wallGeo0, wallMatNorm);
-				houseGroup.add(wallnorm);
 				wall[0].position.set(27.5, 12.5, 50);
 				wall[0].receiveShadow = true;
 				
 				wall[1] = new THREE.Mesh(wallGeo0, wallMat);
 				wall[1].position.set(-27.5, 12.5 , 50);
 				
-				
-				textureLoader.load('images/textures/stonewall.jpg', function( map){
+
+				var wallGeo2 = new THREE.BoxBufferGeometry(10,10,1);
+				var wallMat2 = new THREE.MeshStandardMaterial({wallStyle});
+				textureLoader.load('images/textures/stonewall2.jpg', function( map){
 					map.wrapS = THREE.RepeatWrapping;
 					map.wrapT = THREE.RepeatWrapping;
 					map.anisotropy = 4;
-					map.repeat.set( 1.1 , 4.8  );
+					map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo2.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo2.parameters.height );
 					wallMat2.map = map;
-					wallMat2.roughnessMap = map;
-					wallMat2.needsUpdate = true;
-				});
 
-				var wallGeo2 = new THREE.BoxBufferGeometry(10,10,1, 1, 1);
-				var wallMat2 = new THREE.MeshStandardMaterial({wallStyle});
+					texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
+					texture.wrapS =THREE.RepeatWrapping;
+					texture.wrapT = THREE.RepeatWrapping;
+					texture.anisotropy = 4;
+					texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo2.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo2.parameters.height);
+					wallMat2.normalMap = texture;
+					wallMat2.needsUpdate = true; 
+				});
 				wall[2] = new Physijs.BoxMesh(wallGeo2, wallMat2);
 				wall[2].position.set(0, 20, 50);
 				
+
 				//wall (garden)
 				var wallGeo3 = new THREE.BoxBufferGeometry(10,25, 1);
 				var wallMat3 = new THREE.MeshStandardMaterial({wallStyle});
-				textureLoader.load('images/textures/stonewall.jpg', function( map){
+				textureLoader.load('images/textures/stonewall2.jpg', function( map){
 					map.wrapS = THREE.RepeatWrapping;
 					map.wrapT = THREE.RepeatWrapping;
 					map.anisotropy = 4;
-					map.repeat.set(1.1 , 12  );
+					map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo3.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo3.parameters.height );
 					wallMat3.map = map;
-					wallMat3.roughnessMap = map;
-					wallMat3.needsUpdate = true;
+
+					texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
+					texture.wrapS =THREE.RepeatWrapping;
+					texture.wrapT = THREE.RepeatWrapping;
+					texture.anisotropy = 4;
+					texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo3.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo3.parameters.height);
+					wallMat3.normalMap = texture;
+					wallMat3.needsUpdate = true; 
 				});
 				wall[3] = new Physijs.BoxMesh(wallGeo3, wallMat3); //wall right
 				wall[3].position.set(45, 12.5, -50);
@@ -275,28 +378,40 @@
 
 				var wallGeo5 = new THREE.BoxBufferGeometry(80, 5, 1);
 				var wallMat5 = new THREE.MeshStandardMaterial({wallStyle});
-				textureLoader.load('images/textures/stonewall.jpg', function( map){
+				textureLoader.load('images/textures/stonewall2.jpg', function( map){
 					map.wrapS = THREE.RepeatWrapping;
 					map.wrapT = THREE.RepeatWrapping;
 					map.anisotropy = 4;
-					map.repeat.set(  8.9, 12/5  );
+					map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo5.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo5.parameters.height );
 					wallMat5.map = map;
-					wallMat5.roughnessMap = map;
-					wallMat5.needsUpdate = true;
+
+					texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
+					texture.wrapS =THREE.RepeatWrapping;
+					texture.wrapT = THREE.RepeatWrapping;
+					texture.anisotropy = 4;
+					texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo5.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo5.parameters.height);
+					wallMat5.normalMap = texture;
+					wallMat5.needsUpdate = true; 
 				});
 				wall[5] = new Physijs.BoxMesh( wallGeo5, wallMat5); //wall top
 				wall[5].position.set(0, 22.5, -50);
 
 				var wallGeo6= new THREE.BoxBufferGeometry(20, 1, 1);
 				var wallMat6 = new THREE.MeshStandardMaterial({wallStyle});
-				textureLoader.load('images/textures/stonewall.jpg', function( map){
+				textureLoader.load('images/textures/stonewall2.jpg', function( map){
 					map.wrapS = THREE.RepeatWrapping;
 					map.wrapT = THREE.RepeatWrapping;
 					map.anisotropy = 4;
-					map.repeat.set(  2 , 0.5  );
+					map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo6.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo6.parameters.height );
 					wallMat6.map = map;
-					wallMat6.roughnessMap = map;
-					wallMat6.needsUpdate = true;
+
+					texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
+					texture.wrapS =THREE.RepeatWrapping;
+					texture.wrapT = THREE.RepeatWrapping;
+					texture.anisotropy = 4;
+					texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo6.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo6.parameters.height);
+					wallMat6.normalMap = texture;
+					wallMat6.needsUpdate = true; 
 				});
 				wall[6] = new Physijs.BoxMesh(wallGeo6, wallMat6); //wall left low
 				wall[6].position.set(-30, 0.5, -50);
@@ -306,14 +421,20 @@
 
 				var wallGeo8 = new THREE.BoxBufferGeometry(1, 19, 1);
 				var wallMat8 = new THREE.MeshStandardMaterial({wallStyle});
-				textureLoader.load('images/textures/stonewall.jpg', function( map){
+				textureLoader.load('images/textures/stonewall2.jpg', function( map){
 					map.wrapS = THREE.RepeatWrapping;
 					map.wrapT = THREE.RepeatWrapping;
 					map.anisotropy = 4;
-					map.repeat.set(  0.1 , 9.1  );
+					map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo8.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo8.parameters.height );
 					wallMat8.map = map;
-					wallMat8.roughnessMap = map;
-					wallMat8.needsUpdate = true;
+
+					texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
+					texture.wrapS =THREE.RepeatWrapping;
+					texture.wrapT = THREE.RepeatWrapping;
+					texture.anisotropy = 4;
+					texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo8.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo8.parameters.height);
+					wallMat8.normalMap = texture;
+					wallMat8.needsUpdate = true; 
 				});
 				wall[8] = new Physijs.BoxMesh(wallGeo8, wallMat8); //wall left between
 				wall[8].position.set(-20.5, 10.5, -50);
@@ -322,14 +443,20 @@
 
 				var wallGeo10 = new THREE.BoxBufferGeometry(100, 25, 1);
 				var wallMat10 = new THREE.MeshStandardMaterial([wallStyle]);
-				textureLoader.load('images/textures/stonewall.jpg', function( map){
+				textureLoader.load('images/textures/stonewall2.jpg', function( map){
 					map.wrapS = THREE.RepeatWrapping;
 					map.wrapT = THREE.RepeatWrapping;
 					map.anisotropy = 4;
-					map.repeat.set(  11, 12 );
+					map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo10.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo10.parameters.height );
 					wallMat10.map = map;
-					wallMat10.roughnessMap = map;
-					wallMat10.needsUpdate = true;
+
+					texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
+					texture.wrapS =THREE.RepeatWrapping;
+					texture.wrapT = THREE.RepeatWrapping;
+					texture.anisotropy = 4;
+					texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo10.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo10.parameters.height);
+					wallMat10.normalMap = texture;
+					wallMat10.needsUpdate = true; 
 				});
 
 				wall[10] = new Physijs.BoxMesh(wallGeo10, wallMat10); //wall left
@@ -440,17 +567,30 @@
 				scene.add(moon);
 				moon.position.set(0 , 200, -2000);
 				moon.rotation.y = -Math.PI/ 2.5;
+
+				var moonshineMat = new THREE.SpriteMaterial({
+				map: textureLoader.load('images/textures/glow.png'),
+				color: 0xffffff,
+				fog: false,
+				transparent: true,
+				opacity: 0.3,
+				blending: THREE.AdditiveBlending
+				})
+				var moonshine = new THREE.Sprite(moonshineMat);
+				moonshine.scale.set(400, 400, 1);
+				moonshine.position.set = moon.position;
+				moon.add(moonshine);
 				
 
 
 			//Outside
-			var floorGeo2 = new THREE.BoxBufferGeometry(500, 500, 0.1);
-			var floorMat2 = new THREE.MeshStandardMaterial({wallStyle});
+			var floorGeo2 = new THREE.BoxBufferGeometry(1000, 1000, 0.1);
+			var floorMat2 = new THREE.MeshLambertMaterial({});
 			textureLoader.load("js/examples/textures/terrain/grasslight-big.jpg", function( map) {
 				map.wrapS = THREE.RepeatWrapping;
 				map.wrapT = THREE.RepeatWrapping;
 				map.anisotropy = 4;
-				map.repeat.set( 10, 24 );
+				map.repeat.set( 100, 100 );
 				
 				floorMat2.map = map;
 				floorMat2.needsUpdate = true;
@@ -472,6 +612,7 @@
 			
 			
 		//Objects
+			//cube
 			var cubeGeo = new THREE.BoxBufferGeometry(20,20,20, 8, 8, 8);
 			var cubeMat = new THREE.MeshStandardMaterial({color: 0x00ff00});
 			cube = new Physijs.BoxMesh(cubeGeo, cubeMat);
@@ -483,12 +624,25 @@
 			
 			//Flashlight - flash = object, flashsource = lightsource
 			flashlight(); //creates Flashlight "flash"
-			flashsource = new THREE.SpotLight(0xffffff, 2, 200, 0.5, 0.25, 2);
+			flashsource = new THREE.SpotLight(0xffffff, 1000, 200, 0.15, 0.25, 2);
 			flashsource.castShadow = true;
 			scene.add(flashsource);
+			scene.add(flashsource.target);
 			controls.getObject().add(flashsource);
+			controls.getObject().add(flashsource.target);
+
 			flashsource.position.set(2, -2, -10.5);
 			
+			
+			treegarden1();
+			treegarden2();
+			duck();
+			pennywise();
+			
+
+			//Audio
+			horrortheme();
+
 			
 			
 		
@@ -521,7 +675,14 @@
 				scene.simulate();
 				
 				if('undefined' !== typeof flash){
+					
+				}
+				//flashsource movement
+				flashsource.target.position.set(flashsource.position.x, flashsource.position.y, flashsource.position.z -1);
 
+				//pennywise movement
+				if('undefined' !== typeof pennywise){
+					pennywise.lookAt(controls.getObject().position);
 				}
 
 
@@ -607,6 +768,8 @@
 			
 			}
 		
+
+		//Key Actions
 		function keyDown(event){
 			switch ( event.keyCode ) {
 						case 38: // up
@@ -628,7 +791,25 @@
 							if ( canJump === true ) velocity.y += 150;
 							canJump = false;
 							break;
-					}
+						case 70: // f
+							if( flashOn === false) {
+								flashOn = true;
+								flashsource.intensity = 0;
+								break;
+							 } else {
+								flashOn = false;
+								flashsource.intensity =1000;
+								break;
+							}
+						case 80: //p
+							if(sound.isPlaying == true){
+								sound.pause();
+								break;
+							} else {
+								sound.play() = true;
+								break;
+							}
+			}
 		}
 
 		function keyUp(event){
@@ -654,50 +835,167 @@
 
 		window.addEventListener('keydown', keyDown, false);
 		window.addEventListener('keyup', keyUp, false);
-
-		function flashlight(){
-			var colladaLoader = new THREE.ColladaLoader();
-			var textureLoader = new THREE.TextureLoader();
-			var dae;
-			colladaLoader.load('models/dae/flashlight/source/model.dae', function(collada){
-				dae = collada.scene;
-				dae.traverse( function ( node ) {
-					if ( node instanceof THREE.Mesh){
-						node.material.map = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_albedo.jpeg');
-						node.material.normalMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_normal.png');
-						node.material.aoMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_AO.jpeg');
-						node.material.emissiveMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_emissive.jpeg');
-						node.material.metalnessMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_metallic.jpeg');
-						node.material.roughnessMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_roughness.jpeg');
-					} 
-				}); 
-
-
-				dae.scale.set(3, 3 , 3);
-				scene.add(dae);
-				flash = dae;
-				controls.getObject().add(dae);
-				dae.rotation.y += Math.PI / 2.0;
-				dae.position.set(2, -2 , -10);
 		
-			},
-            function ( xhr ) {
 
-            console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
-			
 
-            },
-            // called when loading has errors
-			
-            function ( error ) {
+		//functions for objects
+			//flashlight object
+			function flashlight(){
+				var colladaLoader = new THREE.ColladaLoader();
+				var textureLoader = new THREE.TextureLoader();
+				var dae;
+				colladaLoader.load('models/dae/flashlight/source/model.dae', function(collada){
+					dae = collada.scene;
+					dae.traverse( function ( node ) {
+						if ( node instanceof THREE.Mesh){
+							node.material.map = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_albedo.jpeg');
+							node.material.normalMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_normal.png');
+							node.material.aoMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_AO.jpeg');
+							node.material.emissiveMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_emissive.jpeg');
+							node.material.metalnessMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_metallic.jpeg');
+							node.material.roughnessMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_roughness.jpeg');
+						} 
+					}); 
 
-            console.log( 'An error happened' )
-            })
+
+					dae.scale.set(3, 3 , 3);
+					scene.add(dae);
+					flash = dae;
+					controls.getObject().add(dae);
+					dae.rotation.y += Math.PI / 2.0;
+					dae.position.set(2, -2 , -10);
 			
-            }
-            
-        
+				},
+				function ( xhr ) {
+				console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+				},
+
+				function ( error ) {
+				console.log( 'An error happened' )
+				})
+				
+				}
+				
+			
+			//tree garden
+			function treegarden1(){
+				gltfLoader.load('models/gltf/trees/tree2/scene.gltf',
+					function ( gltf ) {
+						var newMat = new THREE.MeshPhongMaterial();
+						gltf.scene.position.set(20, 35 ,-450);
+						gltf.scene.scale.set(30, 30 , 30);
+
+						gltf.scene.traverse(function(node){
+							if (node instanceof THREE.Mesh){
+								newMat.map = node.material.map;
+								newMat.normalMap = node.material.normalMap;
+								newMat.roughnessMap = node.material.roughnessMap;
+								newMat.roughness = node.material.roughness;
+								newMat.bumpMap = node.material.bumpMap;
+								newMat.bumpScale = node.material.bumpScale;
+								newMat.specularMap = node.material.specularMap;
+								node.material = newMat;
+								node.material.shininess = 2;
+								node.castShadow = true; 
+							}
+						});
+						scene.add( gltf.scene );
+					},
+					function ( xhr ) {
+						console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded - treegarden1' );
+
+					},
+					function ( error ) {
+						console.log( 'An error happened' );
+					}
+				);
+			}
+
+			//tree garden 2
+			function treegarden2(){
+				gltfLoader.load(
+					'models/gltf/trees/tree2/scene.gltf',
+					function ( gltf ) {
+						var newMat = new THREE.MeshPhongMaterial();
+						gltf.scene.position.set(-50, 35 ,-450);
+						gltf.scene.scale.set(30, 30 , 30);
+						gltf.scene.traverse(function(node){
+							if (node instanceof THREE.Mesh){
+								newMat.map = node.material.map;
+								newMat.normalMap = node.material.normalMap;
+								newMat.roughnessMap = node.material.roughnessMap;
+								newMat.roughness = node.material.roughness;
+								newMat.bumpMap = node.material.bumpMap;
+								newMat.bumpScale = node.material.bumpScale;
+								newMat.specularMap = node.material.specularMap;
+								node.material = newMat;
+								node.material.shininess = 2;
+								node.castShadow = true; 
+							}
+						});
+						scene.add( gltf.scene );
+					},
+					function ( xhr ) {
+						console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded treegarden2' );
+					},
+					function ( error ) {
+						console.log( 'An error happened' );
+					}
+				);
+			}
+			//Duck
+			function duck(){
+				gltfLoader.load('js/examples/models/gltf/Duck/glTF/Duck.gltf', function( gltf ) {
+			
+						gltf.scene.traverse(function(node){
+							if (node instanceof THREE.Mesh){
+								node.castShadow = true; 
+							}
+						});
+						gltf.scene.position.set(0, 10, 0);
+						scene.add( gltf.scene );
+					}
+				);
+			}
+
+			//pennywise
+			function pennywise(){
+				gltfLoader.load('models/gltf/pennywise/scene.gltf', 
+					function(gltf){
+						gltf.scene.traverse(function(node){
+							if(node instanceof THREE.Mesh){
+								node.castShadow = true;
+							}
+						});
+						gltf.scene.scale.set(10, 10 , 10);
+						gltf.scene.position.set(0, 0, -300);
+						scene.add(gltf.scene);
+						pennywise = gltf.scene;
+			
+					},
+					function ( xhr ) {
+						console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded pennywise' );
+					},
+					function ( error ) {
+						console.log( 'An error happened' );
+					}
+				)
+			}
 		
+
+		//Audio
+			//horrortheme
+			function horrortheme(){
+				
+				camera.add( listener );
+				var audioLoader = new THREE.AudioLoader();
+				audioLoader.load( 'audio/clown/horror3.wav', function( buffer ) {
+					sound.setBuffer( buffer );
+					sound.setLoop( true );
+					sound.setVolume( 0.5 );
+					sound.play();
+				});
+			}
 	
 	
 	
