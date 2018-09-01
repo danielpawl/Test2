@@ -118,6 +118,9 @@
 
 		var listener = new THREE.AudioListener();
 		var sound = new THREE.Audio( listener );
+		var flashlightSound = new THREE.Audio( listener );
+		var footstepsGrassSound = new THREE.Audio(listener);
+		var clownlaughSound = new THREE.Audio(listener);
 		
 
 		var blocker = document.getElementById( 'blocker' );
@@ -642,6 +645,9 @@
 
 			//Audio
 			horrortheme();
+			flashlightclick()
+			footstepsgrass();
+			clownlaugh();
 
 			
 			
@@ -764,7 +770,9 @@
 					
 				}
 
-				//positionDyn(controls.getObject().position.x, controls.getObject().position.y, controls.getObject().position.z, player.height);
+				//Audio loop
+				
+
 			
 			}
 		
@@ -775,28 +783,38 @@
 						case 38: // up
 						case 87: // w
 							moveForward = true;
+							footstepsGrassSound.play();
 							break;
 						case 37: // left
 						case 65: // a
-							moveLeft = true; break;
+							moveLeft = true; 
+							footstepsGrassSound.play();
+							break;
 						case 40: // down
 						case 83: // s
 							moveBackward = true;
+							footstepsGrassSound.play();
 							break;
 						case 39: // right
 						case 68: // d
 							moveRight = true;
+							footstepsGrassSound.play();
 							break;
 						case 32: // space
 							if ( canJump === true ) velocity.y += 150;
 							canJump = false;
 							break;
-						case 70: // f
+						case 70: // f flashlight
 							if( flashOn === false) {
+								flashlightSound.play();
 								flashOn = true;
 								flashsource.intensity = 0;
 								break;
 							 } else {
+								 if(flashlightSound.isPlaying == true){
+									flashlightSound.stop();
+								 }
+								flashlightSound.play();
 								flashOn = false;
 								flashsource.intensity =1000;
 								break;
@@ -817,18 +835,22 @@
 						case 38: // up
 						case 87: // w
 							moveForward = false;
+							footstepsGrassSound.stop();
 							break;
 						case 37: // left
 						case 65: // a
 							moveLeft = false;
+							footstepsGrassSound.stop();
 							break;
 						case 40: // down
 						case 83: // s
 							moveBackward = false;
+							footstepsGrassSound.stop();
 							break;
 						case 39: // right
 						case 68: // d
 							moveRight = false;
+							footstepsGrassSound.stop();
 							break;
 			}
 		}
@@ -994,8 +1016,40 @@
 					sound.setLoop( true );
 					sound.setVolume( 0.5 );
 					sound.play();
+				
 				});
 			}
+
+			//flashlight click
+			function flashlightclick(){
+				var audioLoader = new THREE.AudioLoader();
+				audioLoader.load( 'audio/sounds/flashlight.wav', function( buffer ) {
+					flashlightSound.setBuffer( buffer );
+					flashlightSound.setVolume( 1.0 );
+					flashlightSound.isPlaying = false;
+				});
+			}
+
+			//footsteps grass
+			function footstepsgrass(){
+				var audioLoader = new THREE.AudioLoader();
+				audioLoader.load( 'audio/sounds/footstepsgrass.wav', function( buffer ) {
+					footstepsGrassSound.setBuffer( buffer );
+					footstepsGrassSound.setVolume( 1.0 );
+					footstepsGrassSound.isPlaying = false;
+				});
+			}
+			function clownlaugh(){
+				var audioLoader = new THREE.AudioLoader();
+				audioLoader.load( 'audio/clown/clownlaugh2.wav', function( buffer ) {
+					clownlaughSound.setBuffer( buffer );
+					clownlaughSound.setLoop(true);
+					clownlaughSound.setVolume( 1.0 );
+					clownlaughSound.play();
+					
+				});
+			}
+			
 	
 	
 	
