@@ -15,6 +15,8 @@ THREE.PointerLockControls = function ( camera ) {
 	yawObject.position.y = 10;
 	yawObject.add( pitchObject );
 
+	var frontObject = new THREE.Object3D();
+
 	var PI_2 = Math.PI / 2;
 
 	var onMouseMove = function ( event ) {
@@ -28,6 +30,7 @@ THREE.PointerLockControls = function ( camera ) {
 		pitchObject.rotation.x -= movementY * 0.002;
 
 		pitchObject.rotation.x = Math.max( - PI_2, Math.min( PI_2, pitchObject.rotation.x ) );
+		frontObject = pitchObject;
 
 	};
 
@@ -46,12 +49,17 @@ THREE.PointerLockControls = function ( camera ) {
 		return yawObject;
 
 	};
+	this.getObject2 = function () {
+		
+		return pitchObject;
+
+	};
 
 	this.getDirection = function () {
 
 		// assumes the camera itself is not rotated
 
-		var direction = new THREE.Vector3( 0, 0, - 1 );
+		var direction = new THREE.Vector3( 0, 0, -1 );
 		var rotation = new THREE.Euler( 0, 0, 0, 'YXZ' );
 
 		return function ( v ) {

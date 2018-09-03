@@ -76,985 +76,1051 @@
 	<script>
 	
 	
-	
+	//needed for Physijs
 	Physijs.scripts.worker = 'js/libs/physijs_worker.js';
-	Physijs.scripts.ammo = 'ammo.js';
+	Physijs.scripts.ammo = 'ammo.js'; //location from worker as source
 	
-	//Desch ist a test
-
+	//objects
 	var scene, camera, renderer, controls; 
-		var pointLightDir;
-		var cube, floor, floor2, pointLight, podestObj, wallnorm; //Objekte
-		var wall = [];
-		var bar = [];
-		var windows = [];
-		var houseGroup = new THREE.Group();
-		var raycaster;
-		var hitObj = [];
-		var hitUnderObj = [];
-		var me, playerGeo, playerMat;
-		var texture;
-		
-		var gltfLoader = new THREE.GLTFLoader();
-
-		
-		var player = {height: 10, speed: 1, arrowspeed: 0.01};
-		var flash, flashsource;
-		var flashVector = new THREE.Vector3();
-		var pennywise;
-
-		var podest = {height: 5 , width: 100, length: 100};
-
-		var keyboard= {};
-		var moveForward = false;
-		var moveBackward = false;
-		var moveLeft = false;
-		var moveRight = false;
-		var canJump = false;
-		var flashOn = false;
-		var prevTime = performance.now();
-		var velocity = new THREE.Vector3();
-		var direction = new THREE.Vector3();
-		var vertex = new THREE.Vector3();
-		var color = new THREE.Color();
-
-		var listener = new THREE.AudioListener();
-		var sound = new THREE.Audio( listener );
-		var flashlightSound = new THREE.Audio( listener );
-		var footstepsGrassSound = new THREE.Audio(listener);
-		var clownlaughSound = new THREE.Audio(listener);
-		
-
-		var blocker = document.getElementById( 'blocker' );
-		var instructions = document.getElementById( 'instructions' );
-		// http://www.html5rocks.com/en/tutorials/pointerlock/intro/
-		var havePointerLock = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
-		if ( havePointerLock ) {
-			var element = document.body;
-			var pointerlockchange = function ( event ) {
-				if ( document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element ) {
-					controlsEnabled = true;
-					controls.enabled = true;
-					blocker.style.display = 'none';
-				} else {
-					controls.enabled = false;
-					blocker.style.display = 'block';
-					instructions.style.display = '';
-				}
-			};
-			var pointerlockerror = function ( event ) {
-				instructions.style.display = '';
-			};
-			// Hook pointer lock state change events
-			document.addEventListener( 'pointerlockchange', pointerlockchange, false );
-			document.addEventListener( 'mozpointerlockchange', pointerlockchange, false );
-			document.addEventListener( 'webkitpointerlockchange', pointerlockchange, false );
-			document.addEventListener( 'pointerlockerror', pointerlockerror, false );
-			document.addEventListener( 'mozpointerlockerror', pointerlockerror, false );
-			document.addEventListener( 'webkitpointerlockerror', pointerlockerror, false );
-			instructions.addEventListener( 'click', function ( event ) {
-				instructions.style.display = 'none';
-				// Ask the browser to lock the pointer
-				element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
-				element.requestPointerLock();
-			}, false );
-		} else {
-			instructions.innerHTML = 'Your browser doesn\'t seem to support Pointer Lock API';
-		}
-		var controlsEnabled = false;
-
-
-		//Funktionen
-
-
-		//Init
-		function init() {
-			scene = new Physijs.Scene();
-			scene.background = new THREE.Color(0x000000); //0x070012
-			scene.fog = new THREE.Fog( 0x000000, 50, 400);
-			
-			camera = new THREE.PerspectiveCamera(30, window.innerWidth/ window.innerHeight, 1, 2500);
-			
-			
-			controls = new THREE.PointerLockControls(camera);
-			scene.add( controls.getObject() );
-
-			
-			renderer = new THREE.WebGLRenderer({antialias: true});
-			renderer.physicallyCorrectLights = true;
-			renderer.gammaInput = true;
-			renderer.gammaOutput = true;
-			renderer.shadowMap.enabled = true;
-			renderer.shadowMapType = THREE.PCFSoftShadowMap;
-			renderer.toneMapping = THREE.ReinhardToneMapping;
-			renderer.setPixelRatio( window.devicePixelRatio );
-			renderer.setSize( window.innerWidth, window.innerHeight );
-			document.body.appendChild( renderer.domElement );
-
-			window.addEventListener( 'resize', onWindowResize, false );
-
-			raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1 , 0), 0, 10);
-
-			var textureLoader = new THREE.TextureLoader();
-			
+	var pointLightDir;
+	var cube, floor, floor2, pointLight, podestObj, wallnorm; //Objekte
+	var wall = [];
+	var bar = [];
+	var windows = [];
+	var houseGroup = new THREE.Group();
+	var raycaster;
+	var hitObj = [];
+	var hitUnderObj = [];
+	var me, playerGeo, playerMat;
+	var texture;
 	
-			
-			//Licht
-			var ambiLight = new THREE.AmbientLight( 0xddeeff, 0.01 );
-				scene.add( ambiLight );
+	var gltfLoader = new THREE.GLTFLoader();
 
-			pointLight = new THREE.PointLight(0xffee88, 200, 100, 2);
-			scene.add(pointLight);
-			pointLight.position.set(0, 15, 0);
-			pointLight.castShadow = true;
-			pointLightDir = 1;
+	
+	var player = {height: 10, speed: 1, arrowspeed: 0.01};
+	var flash, flashsource;
+	var flashVector = new THREE.Vector3();
+	var pennywise, pennyAudio;
 
-			var pointLightTrees = new THREE.SpotLight(0xffee88, 50000, 800, 1, 1 , 2);
-			scene.add(pointLightTrees);
-			pointLightTrees.position.set(0, 50, -600);
-			pointLightTrees.castShadow = true;
-			pointLightTrees.shadowDarkness = 10;
+	var podest = {height: 5 , width: 100, length: 100};
+	
+	//keyboard
+	var keyboard= {};
+	var moveForward = false;
+	var moveBackward = false;
+	var moveLeft = false;
+	var moveRight = false;
+	var canJump = false;
+	var flashOn = false;
 
-			/*var dirLight = new THREE.DirectionalLight(0xffffff, 0.03);
-			scene.add(dirLight);
-			dirLight.position.set(0 , 200, -500);
-			dirLight.castShadow = true;
-			dirLight.shadowDarkness = 1;
-			dirLight.shadow.mapSize.width= 2048;
-			dirLight.shadow.mapSize.height= 2048;
-			dirLight.shadow.camera.near = 10;
-			dirLight.shadow.camera.far = 2100; */
-			
-			
+
+
+
+	var prevTime = performance.now();
+	var velocity = new THREE.Vector3();
+	var direction = new THREE.Vector3();
+	var vertex = new THREE.Vector3();
+	var color = new THREE.Color();
+
+	//Audio
+	var listener = new THREE.AudioListener();
+	var sound = new THREE.Audio( listener );
+	var flashlightSound = new THREE.Audio( listener );
+	var footstepsGrassSound = new THREE.Audio(listener);
+	var clownlaughSound = new THREE.PositionalAudio(listener);
+	
+	//needed for Pointerlock API
+	var blocker = document.getElementById( 'blocker' );
+	var instructions = document.getElementById( 'instructions' );
+	// http://www.html5rocks.com/en/tutorials/pointerlock/intro/
+	var havePointerLock = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
+	if ( havePointerLock ) {
+		var element = document.body;
+		var pointerlockchange = function ( event ) {
+			if ( document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element ) {
+				controlsEnabled = true;
+				controls.enabled = true;
+				blocker.style.display = 'none';
+			} else {
+				controls.enabled = false;
+				blocker.style.display = 'block';
+				instructions.style.display = '';
+			}
+		};
+		var pointerlockerror = function ( event ) {
+			instructions.style.display = '';
+		};
+		// Hook pointer lock state change events
+		document.addEventListener( 'pointerlockchange', pointerlockchange, false );
+		document.addEventListener( 'mozpointerlockchange', pointerlockchange, false );
+		document.addEventListener( 'webkitpointerlockchange', pointerlockchange, false );
+		document.addEventListener( 'pointerlockerror', pointerlockerror, false );
+		document.addEventListener( 'mozpointerlockerror', pointerlockerror, false );
+		document.addEventListener( 'webkitpointerlockerror', pointerlockerror, false );
+		instructions.addEventListener( 'click', function ( event ) {
+			instructions.style.display = 'none';
+			// Ask the browser to lock the pointer
+			element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
+			element.requestPointerLock();
+		}, false );
+	} else {
+		instructions.innerHTML = 'Your browser doesn\'t seem to support Pointer Lock API';
+	}
+	var controlsEnabled = false;
+
+
+	//Funktionen
+
+
+	//Init
+	function init() {
+		scene = new Physijs.Scene();
+		scene.background = new THREE.Color(0x000000); //0x070012
+		scene.fog = new THREE.Fog( 0x000000, 50, 400);
 		
-			
-		//Background
-			//Podest
-			
-			var podestGeo = new THREE.BoxBufferGeometry(podest.width, podest.height, podest.length);
-			var podestMat = new THREE.MeshStandardMaterial({
+		camera = new THREE.PerspectiveCamera(30, window.innerWidth/ window.innerHeight, 1, 2500);
+		
+		
+		controls = new THREE.PointerLockControls(camera);
+		scene.add( controls.getObject() );
 
-			});
-			textureLoader.load('images/textures/stonewall1.jpg', function( map){
-				map.wrapS = THREE.RepeatWrapping;
+		
+		renderer = new THREE.WebGLRenderer({antialias: true});
+		renderer.physicallyCorrectLights = true;
+		renderer.gammaInput = true;
+		renderer.gammaOutput = true;
+		renderer.shadowMap.enabled = true;
+		renderer.shadowMapType = THREE.PCFSoftShadowMap;
+		renderer.toneMapping = THREE.ReinhardToneMapping;
+		renderer.setPixelRatio( window.devicePixelRatio );
+		renderer.setSize( window.innerWidth, window.innerHeight );
+		document.body.appendChild( renderer.domElement );
+
+		window.addEventListener( 'resize', onWindowResize, false );
+
+		raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1 , 0), 0, 10);
+
+		var textureLoader = new THREE.TextureLoader();
+		
+
+		
+		//Licht
+		var ambiLight = new THREE.AmbientLight( 0xddeeff, 0.01 );
+			scene.add( ambiLight );
+
+		pointLight = new THREE.PointLight(0xffee88, 200, 100, 2);
+		scene.add(pointLight);
+		pointLight.position.set(0, 15, 0);
+		pointLight.castShadow = true;
+		pointLightDir = 1;
+
+		var pointLightTrees = new THREE.SpotLight(0xffee88, 50000, 800, 1, 1 , 2);
+		scene.add(pointLightTrees);
+		pointLightTrees.position.set(0, 50, -600);
+		pointLightTrees.castShadow = true;
+		pointLightTrees.shadowDarkness = 10;
+
+		/*var dirLight = new THREE.DirectionalLight(0xffffff, 0.03);
+		scene.add(dirLight);
+		dirLight.position.set(0 , 200, -500);
+		dirLight.castShadow = true;
+		dirLight.shadowDarkness = 1;
+		dirLight.shadow.mapSize.width= 2048;
+		dirLight.shadow.mapSize.height= 2048;
+		dirLight.shadow.camera.near = 10;
+		dirLight.shadow.camera.far = 2100; */
+		
+		
+	
+		
+	//Background
+		//Podest
+		
+		var podestGeo = new THREE.BoxBufferGeometry(podest.width, podest.height, podest.length);
+		var podestMat = new THREE.MeshStandardMaterial({
+
+		});
+		textureLoader.load('images/textures/stonewall1.jpg', function( map){
+			map.wrapS = THREE.RepeatWrapping;
+			map.wrapT = THREE.RepeatWrapping;
+			map.anisotropy = 4;
+			map.repeat.set( 16, 2 );
+			podestMat.map = map;
+
+			texture = textureLoader.load('images/textures/stonewall1norm.jpg'); //normal map
+			texture.wrapS =THREE.RepeatWrapping;
+			texture.wrapT = THREE.RepeatWrapping;
+			texture.anisotropy = 4;
+			texture.repeat.set(  16, 2);
+			podestMat.normalMap = texture;
+			podestMat.needsUpdate = true; 
+		});
+
+		podestObj = new Physijs.BoxMesh(podestGeo, podestMat,0);
+		podestObj.position.set(0, 2.5 , 0);
+		scene.add(podestObj);
+		hitObj.push(podestObj);
+
+		//Floor
+		var floorGeo = new THREE.PlaneBufferGeometry(100, 100);
+		var floorMat = new THREE.MeshStandardMaterial( {
+				roughness: 0.8,
+				color: 0xffffff,
+				metalness: 0.2,
+				bumpScale: 0.0005
+			})
+		var textureLoader = new THREE.TextureLoader();
+		textureLoader.load( "js/examples/textures/hardwood2_diffuse.jpg", function( map ) {
+			map.wrapS = THREE.RepeatWrapping;
+			map.wrapT = THREE.RepeatWrapping;
+			map.anisotropy = 4;
+			map.repeat.set( 10, 24 );
+			floorMat.map = map;
+			floorMat.needsUpdate = true;
+		} );
+		textureLoader.load( "js/examples/textures/hardwood2_bump.jpg", function( map ) {
+			map.wrapS = THREE.RepeatWrapping;
+			map.wrapT = THREE.RepeatWrapping;
+			map.anisotropy = 4;
+			map.repeat.set( 10, 24 );
+			floorMat.bumpMap = map;
+			floorMat.needsUpdate = true;
+		} );
+		textureLoader.load( "js/examples/textures/hardwood2_roughness.jpg", function( map ) {
+			map.wrapS = THREE.RepeatWrapping;
+			map.wrapT = THREE.RepeatWrapping;
+			map.anisotropy = 4;
+			map.repeat.set( 10, 24 );
+			floorMat.roughnessMap = map;
+			floorMat.needsUpdate = true;
+		} );
+
+		floor = new Physijs.BoxMesh(floorGeo, floorMat);
+		floor.rotation.x = -Math.PI / 2.0;
+		floor.position.set(0, 0.01, 0);
+		floor.receiveShadow = true;
+		floor.castShadow = true;
+		houseGroup.add(floor);
+		hitObj.push(floor);
+		
+		//Walls
+			//wall (door)
+			var wallwraps = 12;
+			var wallwrapt = 8;
+
+			var wallStyle = {
+				roughness: 0.8,
+				color: 0xffffff,
+				metalness: 0.0,
+				bumpScale: 0.5};
+
+			var wallGeo0 = new THREE.BoxBufferGeometry(45, 25, 1);
+			var wallMat = new THREE.MeshStandardMaterial({wallStyle});
+			
+			textureLoader.load('images/textures/stonewall2.jpg', function( map){
+				map.wrapS = THREE.RepeatWrapping; //color map
 				map.wrapT = THREE.RepeatWrapping;
 				map.anisotropy = 4;
-				map.repeat.set( 16, 2 );
-				podestMat.map = map;
+				map.repeat.set( wallwraps, wallwrapt );
+				wallMat.map = map;
 
-				texture = textureLoader.load('images/textures/stonewall1norm.jpg'); //normal map
+				texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
 				texture.wrapS =THREE.RepeatWrapping;
 				texture.wrapT = THREE.RepeatWrapping;
 				texture.anisotropy = 4;
-				texture.repeat.set(  16, 2);
-				podestMat.normalMap = texture;
-				podestMat.needsUpdate = true; 
+				texture.repeat.set( wallwraps, wallwrapt);
+				wallMat.normalMap = texture;
+				wallMat.needsUpdate = true;
 			});
 
-			podestObj = new Physijs.BoxMesh(podestGeo, podestMat,0);
-			podestObj.position.set(0, 2.5 , 0);
-			scene.add(podestObj);
-			hitObj.push(podestObj);
-
-			//Floor
-			var floorGeo = new THREE.PlaneBufferGeometry(100, 100);
-			var floorMat = new THREE.MeshStandardMaterial( {
-					roughness: 0.8,
-					color: 0xffffff,
-					metalness: 0.2,
-					bumpScale: 0.0005
-				})
-			var textureLoader = new THREE.TextureLoader();
-			textureLoader.load( "js/examples/textures/hardwood2_diffuse.jpg", function( map ) {
-				map.wrapS = THREE.RepeatWrapping;
-				map.wrapT = THREE.RepeatWrapping;
-				map.anisotropy = 4;
-				map.repeat.set( 10, 24 );
-				floorMat.map = map;
-				floorMat.needsUpdate = true;
-			} );
-			textureLoader.load( "js/examples/textures/hardwood2_bump.jpg", function( map ) {
-				map.wrapS = THREE.RepeatWrapping;
-				map.wrapT = THREE.RepeatWrapping;
-				map.anisotropy = 4;
-				map.repeat.set( 10, 24 );
-				floorMat.bumpMap = map;
-				floorMat.needsUpdate = true;
-			} );
-			textureLoader.load( "js/examples/textures/hardwood2_roughness.jpg", function( map ) {
-				map.wrapS = THREE.RepeatWrapping;
-				map.wrapT = THREE.RepeatWrapping;
-				map.anisotropy = 4;
-				map.repeat.set( 10, 24 );
-				floorMat.roughnessMap = map;
-				floorMat.needsUpdate = true;
-			} );
-
-			floor = new Physijs.BoxMesh(floorGeo, floorMat);
-			floor.rotation.x = -Math.PI / 2.0;
-			floor.position.set(0, 0.01, 0);
-			floor.receiveShadow = true;
-			floor.castShadow = true;
-			houseGroup.add(floor);
-			hitObj.push(floor);
+			wall[0] = new Physijs.BoxMesh( wallGeo0, wallMat);
+			wall[0].position.set(27.5, 12.5, 50);
+			wall[0].receiveShadow = true;
 			
-			//Walls
-				//wall (door)
-				var wallwraps = 12;
-				var wallwrapt = 8;
+			wall[1] = new THREE.Mesh(wallGeo0, wallMat);
+			wall[1].position.set(-27.5, 12.5 , 50);
+			
 
-				var wallStyle = {
-					roughness: 0.8,
-					color: 0xffffff,
-					metalness: 0.0,
-					bumpScale: 0.5};
+			var wallGeo2 = new THREE.BoxBufferGeometry(10,10,1);
+			var wallMat2 = new THREE.MeshStandardMaterial({wallStyle});
+			textureLoader.load('images/textures/stonewall2.jpg', function( map){
+				map.wrapS = THREE.RepeatWrapping;
+				map.wrapT = THREE.RepeatWrapping;
+				map.anisotropy = 4;
+				map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo2.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo2.parameters.height );
+				wallMat2.map = map;
 
-				var wallGeo0 = new THREE.BoxBufferGeometry(45, 25, 1);
-				var wallMat = new THREE.MeshStandardMaterial({wallStyle});
+				texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
+				texture.wrapS =THREE.RepeatWrapping;
+				texture.wrapT = THREE.RepeatWrapping;
+				texture.anisotropy = 4;
+				texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo2.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo2.parameters.height);
+				wallMat2.normalMap = texture;
+				wallMat2.needsUpdate = true; 
+			});
+			wall[2] = new Physijs.BoxMesh(wallGeo2, wallMat2);
+			wall[2].position.set(0, 20, 50);
+			
+
+			//wall (garden)
+			var wallGeo3 = new THREE.BoxBufferGeometry(10,25, 1);
+			var wallMat3 = new THREE.MeshStandardMaterial({wallStyle});
+			textureLoader.load('images/textures/stonewall2.jpg', function( map){
+				map.wrapS = THREE.RepeatWrapping;
+				map.wrapT = THREE.RepeatWrapping;
+				map.anisotropy = 4;
+				map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo3.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo3.parameters.height );
+				wallMat3.map = map;
+
+				texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
+				texture.wrapS =THREE.RepeatWrapping;
+				texture.wrapT = THREE.RepeatWrapping;
+				texture.anisotropy = 4;
+				texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo3.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo3.parameters.height);
+				wallMat3.normalMap = texture;
+				wallMat3.needsUpdate = true; 
+			});
+			wall[3] = new Physijs.BoxMesh(wallGeo3, wallMat3); //wall right
+			wall[3].position.set(45, 12.5, -50);
+
+			wall[4] = new Physijs.BoxMesh(wallGeo3, wallMat3); //wall left
+			wall[4].position.set(-45, 12.5, -50);
+
+			var wallGeo5 = new THREE.BoxBufferGeometry(80, 5, 1);
+			var wallMat5 = new THREE.MeshStandardMaterial({wallStyle});
+			textureLoader.load('images/textures/stonewall2.jpg', function( map){
+				map.wrapS = THREE.RepeatWrapping;
+				map.wrapT = THREE.RepeatWrapping;
+				map.anisotropy = 4;
+				map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo5.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo5.parameters.height );
+				wallMat5.map = map;
+
+				texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
+				texture.wrapS =THREE.RepeatWrapping;
+				texture.wrapT = THREE.RepeatWrapping;
+				texture.anisotropy = 4;
+				texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo5.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo5.parameters.height);
+				wallMat5.normalMap = texture;
+				wallMat5.needsUpdate = true; 
+			});
+			wall[5] = new Physijs.BoxMesh( wallGeo5, wallMat5); //wall top
+			wall[5].position.set(0, 22.5, -50);
+
+			var wallGeo6= new THREE.BoxBufferGeometry(20, 1, 1);
+			var wallMat6 = new THREE.MeshStandardMaterial({wallStyle});
+			textureLoader.load('images/textures/stonewall2.jpg', function( map){
+				map.wrapS = THREE.RepeatWrapping;
+				map.wrapT = THREE.RepeatWrapping;
+				map.anisotropy = 4;
+				map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo6.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo6.parameters.height );
+				wallMat6.map = map;
+
+				texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
+				texture.wrapS =THREE.RepeatWrapping;
+				texture.wrapT = THREE.RepeatWrapping;
+				texture.anisotropy = 4;
+				texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo6.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo6.parameters.height);
+				wallMat6.normalMap = texture;
+				wallMat6.needsUpdate = true; 
+			});
+			wall[6] = new Physijs.BoxMesh(wallGeo6, wallMat6); //wall left low
+			wall[6].position.set(-30, 0.5, -50);
+			
+			wall[7] = new Physijs.BoxMesh(wallGeo6, wallMat6); //wall right low
+			wall[7].position.set(30, 0.5, -50);
+
+			var wallGeo8 = new THREE.BoxBufferGeometry(1, 19, 1);
+			var wallMat8 = new THREE.MeshStandardMaterial({wallStyle});
+			textureLoader.load('images/textures/stonewall2.jpg', function( map){
+				map.wrapS = THREE.RepeatWrapping;
+				map.wrapT = THREE.RepeatWrapping;
+				map.anisotropy = 4;
+				map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo8.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo8.parameters.height );
+				wallMat8.map = map;
+
+				texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
+				texture.wrapS =THREE.RepeatWrapping;
+				texture.wrapT = THREE.RepeatWrapping;
+				texture.anisotropy = 4;
+				texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo8.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo8.parameters.height);
+				wallMat8.normalMap = texture;
+				wallMat8.needsUpdate = true; 
+			});
+			wall[8] = new Physijs.BoxMesh(wallGeo8, wallMat8); //wall left between
+			wall[8].position.set(-20.5, 10.5, -50);
+			wall[9] = new Physijs.BoxMesh(wallGeo8, wallMat8); //wall right between
+			wall[9].position.set(20.5, 10.5, -50);
+
+			var wallGeo10 = new THREE.BoxBufferGeometry(100, 25, 1);
+			var wallMat10 = new THREE.MeshStandardMaterial([wallStyle]);
+			textureLoader.load('images/textures/stonewall2.jpg', function( map){
+				map.wrapS = THREE.RepeatWrapping;
+				map.wrapT = THREE.RepeatWrapping;
+				map.anisotropy = 4;
+				map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo10.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo10.parameters.height );
+				wallMat10.map = map;
+
+				texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
+				texture.wrapS =THREE.RepeatWrapping;
+				texture.wrapT = THREE.RepeatWrapping;
+				texture.anisotropy = 4;
+				texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo10.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo10.parameters.height);
+				wallMat10.normalMap = texture;
+				wallMat10.needsUpdate = true; 
+			});
+
+			wall[10] = new Physijs.BoxMesh(wallGeo10, wallMat10); //wall left
+			wall[10].position.set(-50, 12.5, 0);
+			wall[10].rotation.y = Math.PI /2.0;
+
+			wall[11] = new THREE.Mesh(wallGeo10, wallMat10); //wall right
+			wall[11].position.set(50, 12.5, 0);
+			wall[11].rotation.y = Math.PI /2.0;
+
+			for(var i = 0; i <= (wall.length-1); i++){
+				wall[i].castShadow = true;
+				wall[i].receiveShadow = true;
+				houseGroup.add(wall[i]);
+			}
+
+			//bars
+				//bars left window
+				var barStyle = wallStyle;
+				var barGeo0 = new THREE.BoxBufferGeometry(19 , 0.3 , 0.5);	
+				var barMat0 = new THREE.MeshStandardMaterial({
+					barStyle,
+					color: 0xffffff
+				});
+				bar[0] = new THREE.Mesh(barGeo0, barMat0); //bar windows left low
+				bar[0].position.set(-30.5, 1.15, -50);
+				bar[1] = new THREE.Mesh(barGeo0, barMat0);
+				bar[1].position.set(-30.5, 19.85, -50); //bar windows left high
+
+				var barGeo2 = new THREE.BoxBufferGeometry(0.3 , 18.4, 0.5);
+				bar[2] = new THREE.Mesh(barGeo2, barMat0);	//bar window left right
+				bar[2].position.set( -21.15, 10.5 ,-50);
 				
-				textureLoader.load('images/textures/stonewall2.jpg', function( map){
-					map.wrapS = THREE.RepeatWrapping; //color map
-					map.wrapT = THREE.RepeatWrapping;
-					map.anisotropy = 4;
-					map.repeat.set( wallwraps, wallwrapt );
-					wallMat.map = map;
-
-					texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
-					texture.wrapS =THREE.RepeatWrapping;
-					texture.wrapT = THREE.RepeatWrapping;
-					texture.anisotropy = 4;
-					texture.repeat.set( wallwraps, wallwrapt);
-					wallMat.normalMap = texture;
-					wallMat.needsUpdate = true;
-				});
-
-				wall[0] = new Physijs.BoxMesh( wallGeo0, wallMat);
-				wall[0].position.set(27.5, 12.5, 50);
-				wall[0].receiveShadow = true;
+				bar[3] = new THREE.Mesh(barGeo2, barMat0); //bar window left left
+				bar[3].position.set(-39.85 ,10.5 ,-50);
 				
-				wall[1] = new THREE.Mesh(wallGeo0, wallMat);
-				wall[1].position.set(-27.5, 12.5 , 50);
-				
+				//bars right window
+				bar[4] = new THREE.Mesh(barGeo0, barMat0); //bar window right low
+				bar[4].position.set(30.5, 1.15, -50);
 
-				var wallGeo2 = new THREE.BoxBufferGeometry(10,10,1);
-				var wallMat2 = new THREE.MeshStandardMaterial({wallStyle});
-				textureLoader.load('images/textures/stonewall2.jpg', function( map){
-					map.wrapS = THREE.RepeatWrapping;
-					map.wrapT = THREE.RepeatWrapping;
-					map.anisotropy = 4;
-					map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo2.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo2.parameters.height );
-					wallMat2.map = map;
+				bar[5] = new THREE.Mesh(barGeo0, barMat0); //bar window right high
+				bar[5].position.set(30.5, 19.85, -50);
 
-					texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
-					texture.wrapS =THREE.RepeatWrapping;
-					texture.wrapT = THREE.RepeatWrapping;
-					texture.anisotropy = 4;
-					texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo2.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo2.parameters.height);
-					wallMat2.normalMap = texture;
-					wallMat2.needsUpdate = true; 
-				});
-				wall[2] = new Physijs.BoxMesh(wallGeo2, wallMat2);
-				wall[2].position.set(0, 20, 50);
-				
+				bar[6] = new THREE.Mesh(barGeo2, barMat0);	//bar window right left
+				bar[6].position.set( 21.15, 10.5 ,-50);
 
-				//wall (garden)
-				var wallGeo3 = new THREE.BoxBufferGeometry(10,25, 1);
-				var wallMat3 = new THREE.MeshStandardMaterial({wallStyle});
-				textureLoader.load('images/textures/stonewall2.jpg', function( map){
-					map.wrapS = THREE.RepeatWrapping;
-					map.wrapT = THREE.RepeatWrapping;
-					map.anisotropy = 4;
-					map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo3.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo3.parameters.height );
-					wallMat3.map = map;
+				bar[7] = new THREE.Mesh(barGeo2, barMat0); //bar window right left
+				bar[7].position.set(39.85 ,10.5 ,-50);
 
-					texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
-					texture.wrapS =THREE.RepeatWrapping;
-					texture.wrapT = THREE.RepeatWrapping;
-					texture.anisotropy = 4;
-					texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo3.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo3.parameters.height);
-					wallMat3.normalMap = texture;
-					wallMat3.needsUpdate = true; 
-				});
-				wall[3] = new Physijs.BoxMesh(wallGeo3, wallMat3); //wall right
-				wall[3].position.set(45, 12.5, -50);
-
-				wall[4] = new Physijs.BoxMesh(wallGeo3, wallMat3); //wall left
-				wall[4].position.set(-45, 12.5, -50);
-
-				var wallGeo5 = new THREE.BoxBufferGeometry(80, 5, 1);
-				var wallMat5 = new THREE.MeshStandardMaterial({wallStyle});
-				textureLoader.load('images/textures/stonewall2.jpg', function( map){
-					map.wrapS = THREE.RepeatWrapping;
-					map.wrapT = THREE.RepeatWrapping;
-					map.anisotropy = 4;
-					map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo5.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo5.parameters.height );
-					wallMat5.map = map;
-
-					texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
-					texture.wrapS =THREE.RepeatWrapping;
-					texture.wrapT = THREE.RepeatWrapping;
-					texture.anisotropy = 4;
-					texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo5.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo5.parameters.height);
-					wallMat5.normalMap = texture;
-					wallMat5.needsUpdate = true; 
-				});
-				wall[5] = new Physijs.BoxMesh( wallGeo5, wallMat5); //wall top
-				wall[5].position.set(0, 22.5, -50);
-
-				var wallGeo6= new THREE.BoxBufferGeometry(20, 1, 1);
-				var wallMat6 = new THREE.MeshStandardMaterial({wallStyle});
-				textureLoader.load('images/textures/stonewall2.jpg', function( map){
-					map.wrapS = THREE.RepeatWrapping;
-					map.wrapT = THREE.RepeatWrapping;
-					map.anisotropy = 4;
-					map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo6.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo6.parameters.height );
-					wallMat6.map = map;
-
-					texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
-					texture.wrapS =THREE.RepeatWrapping;
-					texture.wrapT = THREE.RepeatWrapping;
-					texture.anisotropy = 4;
-					texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo6.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo6.parameters.height);
-					wallMat6.normalMap = texture;
-					wallMat6.needsUpdate = true; 
-				});
-				wall[6] = new Physijs.BoxMesh(wallGeo6, wallMat6); //wall left low
-				wall[6].position.set(-30, 0.5, -50);
-				
-				wall[7] = new Physijs.BoxMesh(wallGeo6, wallMat6); //wall right low
-				wall[7].position.set(30, 0.5, -50);
-
-				var wallGeo8 = new THREE.BoxBufferGeometry(1, 19, 1);
-				var wallMat8 = new THREE.MeshStandardMaterial({wallStyle});
-				textureLoader.load('images/textures/stonewall2.jpg', function( map){
-					map.wrapS = THREE.RepeatWrapping;
-					map.wrapT = THREE.RepeatWrapping;
-					map.anisotropy = 4;
-					map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo8.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo8.parameters.height );
-					wallMat8.map = map;
-
-					texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
-					texture.wrapS =THREE.RepeatWrapping;
-					texture.wrapT = THREE.RepeatWrapping;
-					texture.anisotropy = 4;
-					texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo8.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo8.parameters.height);
-					wallMat8.normalMap = texture;
-					wallMat8.needsUpdate = true; 
-				});
-				wall[8] = new Physijs.BoxMesh(wallGeo8, wallMat8); //wall left between
-				wall[8].position.set(-20.5, 10.5, -50);
-				wall[9] = new Physijs.BoxMesh(wallGeo8, wallMat8); //wall right between
-				wall[9].position.set(20.5, 10.5, -50);
-
-				var wallGeo10 = new THREE.BoxBufferGeometry(100, 25, 1);
-				var wallMat10 = new THREE.MeshStandardMaterial([wallStyle]);
-				textureLoader.load('images/textures/stonewall2.jpg', function( map){
-					map.wrapS = THREE.RepeatWrapping;
-					map.wrapT = THREE.RepeatWrapping;
-					map.anisotropy = 4;
-					map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo10.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo10.parameters.height );
-					wallMat10.map = map;
-
-					texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
-					texture.wrapS =THREE.RepeatWrapping;
-					texture.wrapT = THREE.RepeatWrapping;
-					texture.anisotropy = 4;
-					texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo10.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo10.parameters.height);
-					wallMat10.normalMap = texture;
-					wallMat10.needsUpdate = true; 
-				});
-
-				wall[10] = new Physijs.BoxMesh(wallGeo10, wallMat10); //wall left
-				wall[10].position.set(-50, 12.5, 0);
-				wall[10].rotation.y = Math.PI /2.0;
-
-				wall[11] = new THREE.Mesh(wallGeo10, wallMat10); //wall right
-				wall[11].position.set(50, 12.5, 0);
-				wall[11].rotation.y = Math.PI /2.0;
-
-				for(var i = 0; i <= (wall.length-1); i++){
-					wall[i].castShadow = true;
-					wall[i].receiveShadow = true;
-					houseGroup.add(wall[i]);
+				for(var i = 0; i <= (bar.length -1) ; i++){
+					houseGroup.add(bar[i]);
 				}
 
-				//bars
-					//bars left window
-					var barStyle = wallStyle;
-					var barGeo0 = new THREE.BoxBufferGeometry(19 , 0.3 , 0.5);	
-					var barMat0 = new THREE.MeshStandardMaterial({
-						barStyle,
-						color: 0xffffff
-					});
-					bar[0] = new THREE.Mesh(barGeo0, barMat0); //bar windows left low
-					bar[0].position.set(-30.5, 1.15, -50);
-					bar[1] = new THREE.Mesh(barGeo0, barMat0);
-					bar[1].position.set(-30.5, 19.85, -50); //bar windows left high
-
-					var barGeo2 = new THREE.BoxBufferGeometry(0.3 , 18.4, 0.5);
-					bar[2] = new THREE.Mesh(barGeo2, barMat0);	//bar window left right
-					bar[2].position.set( -21.15, 10.5 ,-50);
-					
-					bar[3] = new THREE.Mesh(barGeo2, barMat0); //bar window left left
-					bar[3].position.set(-39.85 ,10.5 ,-50);
-					
-					//bars right window
-					bar[4] = new THREE.Mesh(barGeo0, barMat0); //bar window right low
-					bar[4].position.set(30.5, 1.15, -50);
-
-					bar[5] = new THREE.Mesh(barGeo0, barMat0); //bar window right high
-					bar[5].position.set(30.5, 19.85, -50);
-
-					bar[6] = new THREE.Mesh(barGeo2, barMat0);	//bar window right left
-					bar[6].position.set( 21.15, 10.5 ,-50);
-
-					bar[7] = new THREE.Mesh(barGeo2, barMat0); //bar window right left
-					bar[7].position.set(39.85 ,10.5 ,-50);
-
-					for(var i = 0; i <= (bar.length -1) ; i++){
-						houseGroup.add(bar[i]);
-					}
-
-				//windows
-				var windowGeo = new THREE.BoxBufferGeometry(18.4, 18.4, 0.1);
-				var windowMat = new THREE.MeshPhongMaterial({
-					transparent: true,
-					opacity: 0.3,
-					side: THREE.DoubleSide,
-					color: 0xffffff,
-					shininess: 1000
-				});
-				windows[0] = new THREE.Mesh(windowGeo, windowMat); //window front left
-				windows[0].position.set(-30.5, 10.5, -50);
-
-				windows[1] = new THREE.Mesh(windowGeo, windowMat); //window front right
-				windows[1].position.set(30.5, 10.5, -50);
-
-				for(var i = 0; i <= (windows.length -1) ; i++){
-						houseGroup.add(windows[i]);
-					}
-
-				//ceiling
-				var ceilingGeo = new THREE.PlaneBufferGeometry(100 , 100 );
-				var ceilingMat = new THREE.MeshStandardMaterial({wallStyle, side: THREE.DoubleSide});
-				textureLoader.load('images/textures/ceiling.png', function( map){
-					map.wrapS = THREE.RepeatWrapping;
-					map.wrapT = THREE.RepeatWrapping;
-					map.anisotropy = 4;
-					map.repeat.set(  11, 12 );
-					ceilingMat.map = map;
-					ceilingMat.roughnessMap = map;
-					ceilingMat.needsUpdate = true;
-				});
-				var ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
-				houseGroup.add(ceiling);
-				ceiling.position.set(0, 25, 0);
-				ceiling.rotation.x = Math.PI / 2.0;
-				ceiling.receiveShadow = true;
-				ceiling.castShadow = true;
-				hitObj.push(ceiling);
-				hitUnderObj.push(ceiling);
-
-				//HouseGroup
-				houseGroup.position.y += podest.height;
-				scene.add(houseGroup);
-
-				//moon
-
-				var moonGeo = new THREE.SphereBufferGeometry(80, 32, 32);
-				var moonMat = new THREE.MeshBasicMaterial({
-					color: 0xffffff,
-					map: textureLoader.load('images/planets/moonmap4k.jpg'),
-					bumpMap: textureLoader.load('images/planets/moonbump4k.jpg'),
-					fog: false
-				});
-				var moon = new THREE.Mesh(moonGeo, moonMat);
-				scene.add(moon);
-				moon.position.set(0 , 200, -2000);
-				moon.rotation.y = -Math.PI/ 2.5;
-
-				var moonshineMat = new THREE.SpriteMaterial({
-				map: textureLoader.load('images/textures/glow.png'),
-				color: 0xffffff,
-				fog: false,
+			//windows
+			var windowGeo = new THREE.BoxBufferGeometry(18.4, 18.4, 0.1);
+			var windowMat = new THREE.MeshPhongMaterial({
 				transparent: true,
 				opacity: 0.3,
-				blending: THREE.AdditiveBlending
-				})
-				var moonshine = new THREE.Sprite(moonshineMat);
-				moonshine.scale.set(400, 400, 1);
-				moonshine.position.set = moon.position;
-				moon.add(moonshine);
-				
+				side: THREE.DoubleSide,
+				color: 0xffffff,
+				shininess: 1000
+			});
+			windows[0] = new THREE.Mesh(windowGeo, windowMat); //window front left
+			windows[0].position.set(-30.5, 10.5, -50);
 
+			windows[1] = new THREE.Mesh(windowGeo, windowMat); //window front right
+			windows[1].position.set(30.5, 10.5, -50);
 
-			//Outside
-			var floorGeo2 = new THREE.BoxBufferGeometry(1000, 1000, 0.1);
-			var floorMat2 = new THREE.MeshLambertMaterial({});
-			textureLoader.load("js/examples/textures/terrain/grasslight-big.jpg", function( map) {
+			for(var i = 0; i <= (windows.length -1) ; i++){
+					houseGroup.add(windows[i]);
+				}
+
+			//ceiling
+			var ceilingGeo = new THREE.PlaneBufferGeometry(100 , 100 );
+			var ceilingMat = new THREE.MeshStandardMaterial({wallStyle, side: THREE.DoubleSide});
+			textureLoader.load('images/textures/ceiling.png', function( map){
 				map.wrapS = THREE.RepeatWrapping;
 				map.wrapT = THREE.RepeatWrapping;
 				map.anisotropy = 4;
-				map.repeat.set( 100, 100 );
-				
-				floorMat2.map = map;
-				floorMat2.needsUpdate = true;
+				map.repeat.set(  11, 12 );
+				ceilingMat.map = map;
+				ceilingMat.roughnessMap = map;
+				ceilingMat.needsUpdate = true;
 			});
-			textureLoader.load("js/examples/textures/terrain/grasslight-big-nm.jpg", function( map) {
-				map.wrapS = THREE.RepeatWrapping;
-				map.wrapT = THREE.RepeatWrapping;
-				map.anisotropy = 4;
-				map.repeat.set( 10, 24 );
-				floorMat2.normalMap = map;
-				floorMat2.needsUpdate = true;
+			var ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
+			houseGroup.add(ceiling);
+			ceiling.position.set(0, 25, 0);
+			ceiling.rotation.x = Math.PI / 2.0;
+			ceiling.receiveShadow = true;
+			ceiling.castShadow = true;
+			hitObj.push(ceiling);
+			hitUnderObj.push(ceiling);
+
+			//HouseGroup
+			houseGroup.position.y += podest.height;
+			scene.add(houseGroup);
+
+			//moon
+
+			var moonGeo = new THREE.SphereBufferGeometry(80, 32, 32);
+			var moonMat = new THREE.MeshBasicMaterial({
+				color: 0xffffff,
+				map: textureLoader.load('images/planets/moonmap4k.jpg'),
+				bumpMap: textureLoader.load('images/planets/moonbump4k.jpg'),
+				fog: false
 			});
-			floor2 = new Physijs.BoxMesh(floorGeo2, floorMat2, 0);
-			floor2.rotation.x = -Math.PI / 2.0;
-			floor2.receiveShadow = true;
-			floor2.castShadow = true;
-			scene.add(floor2);
+			var moon = new THREE.Mesh(moonGeo, moonMat);
+			scene.add(moon);
+			moon.position.set(0 , 200, -2000);
+			moon.rotation.y = -Math.PI/ 2.5;
 
-			
-			
-		//Objects
-			//cube
-			var cubeGeo = new THREE.BoxBufferGeometry(20,20,20, 8, 8, 8);
-			var cubeMat = new THREE.MeshStandardMaterial({color: 0x00ff00});
-			cube = new Physijs.BoxMesh(cubeGeo, cubeMat);
-			cube.position.set(80, 80, -80);
-			scene.add(cube);
-			cube.castShadow = true;
-			hitObj.push(cube);
-			hitObj.push(houseGroup);
-			
-			//Flashlight - flash = object, flashsource = lightsource
-			flashlight(); //creates Flashlight "flash"
-			flashsource = new THREE.SpotLight(0xffffff, 1000, 200, 0.15, 0.25, 2);
-			flashsource.castShadow = true;
-			scene.add(flashsource);
-			scene.add(flashsource.target);
-			controls.getObject().add(flashsource);
-			controls.getObject().add(flashsource.target);
-
-			flashsource.position.set(2, -2, -10.5);
-			
-			
-			treegarden1();
-			treegarden2();
-			duck();
-			pennywise();
-			
-
-			//Audio
-			horrortheme();
-			flashlightclick()
-			footstepsgrass();
-			clownlaugh();
-
-			
-			
-		
-		//player
-			/* playerGeo = new THREE.BoxGeometry(5, 10, 5, 8, 8, 8);
-			 playerMat = new THREE.MeshPhongMaterial({
-				transparent: true,
-				opacity: 1,
-				wireframe: true
+			var moonshineMat = new THREE.SpriteMaterial({
+			map: textureLoader.load('images/textures/glow.png'),
+			color: 0xffffff,
+			fog: false,
+			transparent: true,
+			opacity: 0.3,
+			blending: THREE.AdditiveBlending
 			})
-			me = new THREE.Mesh(playerGeo,playerMat);
-			scene.add(me);
-			me.position.set(camera.position.x, camera.position.y, camera.position.z); */
+			var moonshine = new THREE.Sprite(moonshineMat);
+			moonshine.scale.set(400, 400, 1);
+			moonshine.position.set = moon.position;
+			moon.add(moonshine);
 			
 
-			animate();
+
+		//Outside
+		var floorGeo2 = new THREE.BoxBufferGeometry(1000, 1000, 0.1);
+		var floorMat2 = new THREE.MeshLambertMaterial({
+		});
+		textureLoader.load("js/examples/textures/terrain/grasslight-big.jpg", function( map) {
+			map.wrapS = THREE.RepeatWrapping;
+			map.wrapT = THREE.RepeatWrapping;
+			map.anisotropy = 4;
+			map.repeat.set( 100, 100 );
+			floorMat2.map = map;
+			floorMat2.needsUpdate = true;
+		});
+		textureLoader.load("js/examples/textures/terrain/grasslight-big-nm.jpg", function( map) {
+			map.wrapS = THREE.RepeatWrapping;
+			map.wrapT = THREE.RepeatWrapping;
+			map.anisotropy = 4;
+			map.repeat.set( 10, 24 );
+			floorMat2.normalMap = map;
+			floorMat2.needsUpdate = true;
+		});
+		floor2 = new Physijs.BoxMesh(floorGeo2, floorMat2, 0);
+		floor2.rotation.x = -Math.PI / 2.0;
+		floor2.receiveShadow = true;
+		floor2.castShadow = true;
+		scene.add(floor2);
+
 		
-		}
-
-		function onWindowResize() {
-			camera.aspect = window.innerWidth / window.innerHeight;
-			camera.updateProjectionMatrix();
-			renderer.setSize( window.innerWidth, window.innerHeight );
-		}
-
-		//Animete loop
-			function animate() {
-				requestAnimationFrame( animate );
-				renderer.render( scene, camera );
-				scene.simulate();
-				
-				if('undefined' !== typeof flash){
-					
-				}
-				//flashsource movement
-				flashsource.target.position.set(flashsource.position.x, flashsource.position.y, flashsource.position.z -1);
-
-				//pennywise movement
-				if('undefined' !== typeof pennywise){
-					pennywise.lookAt(controls.getObject().position);
-				}
-
-
-				//player
-				//me.position.set(controls.getObject().position.x, controls.getObject().position.y, controls.getObject().position.z);
-				
-				
-				//pointlight movement
-				if(pointLight.position.y >= 24 && pointLightDir ==1){
-						pointLightDir = -1;
-					} else if (pointLightDir == 1 && pointLight.position.y != 0){
-						pointLight.position.y += 0.05;
-					} else if(pointLightDir == -1 && pointLight.position.y > 0){
-						pointLight.position.y -= 0.05;
-					} else if (pointLight.position.y <= 0 && pointLightDir == -1){
-						pointLightDir = 1;
-					} 
-					
-					//var originPoint = me.position.clone();
-
-					/*for (var vertexIndex = 0; vertexIndex < me.geometry.vertices.length; vertexIndex++)
-					{       
-						var localVertex = me.geometry.vertices[vertexIndex].clone();
-						var globalVertex = localVertex.applyMatrix4( me.matrix );
-						var directionVector = globalVertex.sub( me.position );
-
-						var ray = new THREE.Raycaster( originPoint, directionVector.clone().normalize() );
-						var collisionResults = ray.intersectObjects( hitObj );
-						if ( collisionResults.length > 0 && collisionResults[0].distance < directionVector.length() ) {
-							
-							velocity.y = Math.max(0, velocity.y);
-							canJump = true;
-						} else  if ( collisionResults.length == 0){
-						}
-							
-					}  */
-
-					
-						
-					
-				//Control
-				if(controlsEnabled){
-					
-
-					raycaster.ray.origin.copy(controls.getObject().position);
-					raycaster.ray.origin.y -= player.height;
-					var intersectionsOn = raycaster.intersectObjects(hitObj);
-					var onObject = intersectionsOn.length >0;
-					var instersectionsUnder = raycaster.intersectObjects(hitUnderObj);
-					var underObj = instersectionsUnder.length >0;
-				
-					var time = performance.now();
-					var delta = ( time - prevTime ) / 1000;
-					velocity.x -= velocity.x * 10.0 * delta;
-					velocity.z -= velocity.z * 10.0 * delta;
-					velocity.y -= 9.8 * 50.0 * delta; // 100.0 = mass
-					direction.z = Number( moveForward ) - Number( moveBackward );
-					direction.x = Number( moveLeft ) - Number( moveRight );
-					direction.normalize(); // this ensures consistent movements in all directions
-					if ( moveForward || moveBackward ) velocity.z -= direction.z * 400.0 * delta;
-					if ( moveLeft || moveRight ) velocity.x -= direction.x * 400.0 * delta;
-
-					if(onObject === true){
-						velocity.y = Math.max(0, velocity.y);
-						canJump = true;
-					} 
-					
-					controls.getObject().translateX( 2*velocity.x * delta );
-					controls.getObject().translateY( velocity.y * delta  );
-					controls.getObject().translateZ( 2*velocity.z * delta );
-					if ( controls.getObject().position.y < player.height ) {
-						velocity.y = 0;
-						controls.getObject().position.y = player.height;
-						canJump = true;
-					}
-					prevTime = time;
-
-					
-					
-				}
-
-				//Audio loop
-				
-
-			
-			}
 		
-
-		//Key Actions
-		function keyDown(event){
-			switch ( event.keyCode ) {
-						case 38: // up
-						case 87: // w
-							moveForward = true;
-							footstepsGrassSound.play();
-							break;
-						case 37: // left
-						case 65: // a
-							moveLeft = true; 
-							footstepsGrassSound.play();
-							break;
-						case 40: // down
-						case 83: // s
-							moveBackward = true;
-							footstepsGrassSound.play();
-							break;
-						case 39: // right
-						case 68: // d
-							moveRight = true;
-							footstepsGrassSound.play();
-							break;
-						case 32: // space
-							if ( canJump === true ) velocity.y += 150;
-							canJump = false;
-							break;
-						case 70: // f flashlight
-							if( flashOn === false) {
-								flashlightSound.play();
-								flashOn = true;
-								flashsource.intensity = 0;
-								break;
-							 } else {
-								 if(flashlightSound.isPlaying == true){
-									flashlightSound.stop();
-								 }
-								flashlightSound.play();
-								flashOn = false;
-								flashsource.intensity =1000;
-								break;
-							}
-						case 80: //p
-							if(sound.isPlaying == true){
-								sound.pause();
-								break;
-							} else {
-								sound.play() = true;
-								break;
-							}
-			}
-		}
-
-		function keyUp(event){
-			switch( event.keyCode ) {
-						case 38: // up
-						case 87: // w
-							moveForward = false;
-							footstepsGrassSound.stop();
-							break;
-						case 37: // left
-						case 65: // a
-							moveLeft = false;
-							footstepsGrassSound.stop();
-							break;
-						case 40: // down
-						case 83: // s
-							moveBackward = false;
-							footstepsGrassSound.stop();
-							break;
-						case 39: // right
-						case 68: // d
-							moveRight = false;
-							footstepsGrassSound.stop();
-							break;
-			}
-		}
-
-		window.addEventListener('keydown', keyDown, false);
-		window.addEventListener('keyup', keyUp, false);
+	//Objects
+		//cube
+		var cubeGeo = new THREE.BoxBufferGeometry(20,20,20, 8, 8, 8);
+		var cubeMat = new THREE.MeshStandardMaterial({color: 0x00ff00});
+		cube = new Physijs.BoxMesh(cubeGeo, cubeMat);
+		cube.position.set(80, 80, -80);
+		scene.add(cube);
+		cube.castShadow = true;
+		hitObj.push(cube);
+		hitObj.push(houseGroup);
 		
+		//Flashlight - flash = object, flashsource = lightsource
+		flashlight(); //creates Flashlight "flash"
+		flashsource = new THREE.SpotLight(0xffffff, 1000, 200, 0.15, 0.25, 2);
+		flashsource.castShadow = true;
+		scene.add(flashsource);
+		scene.add(flashsource.target);
+		controls.getObject2().add(flashsource);
+		controls.getObject2().add(flashsource.target);
 
-
-		//functions for objects
-			//flashlight object
-			function flashlight(){
-				var colladaLoader = new THREE.ColladaLoader();
-				var textureLoader = new THREE.TextureLoader();
-				var dae;
-				colladaLoader.load('models/dae/flashlight/source/model.dae', function(collada){
-					dae = collada.scene;
-					dae.traverse( function ( node ) {
-						if ( node instanceof THREE.Mesh){
-							node.material.map = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_albedo.jpeg');
-							node.material.normalMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_normal.png');
-							node.material.aoMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_AO.jpeg');
-							node.material.emissiveMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_emissive.jpeg');
-							node.material.metalnessMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_metallic.jpeg');
-							node.material.roughnessMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_roughness.jpeg');
-						} 
-					}); 
-
-
-					dae.scale.set(3, 3 , 3);
-					scene.add(dae);
-					flash = dae;
-					controls.getObject().add(dae);
-					dae.rotation.y += Math.PI / 2.0;
-					dae.position.set(2, -2 , -10);
-			
-				},
-				function ( xhr ) {
-				console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
-				},
-
-				function ( error ) {
-				console.log( 'An error happened' )
-				})
-				
-				}
-				
-			
-			//tree garden
-			function treegarden1(){
-				gltfLoader.load('models/gltf/trees/tree2/scene.gltf',
-					function ( gltf ) {
-						var newMat = new THREE.MeshPhongMaterial();
-						gltf.scene.position.set(20, 35 ,-450);
-						gltf.scene.scale.set(30, 30 , 30);
-
-						gltf.scene.traverse(function(node){
-							if (node instanceof THREE.Mesh){
-								newMat.map = node.material.map;
-								newMat.normalMap = node.material.normalMap;
-								newMat.roughnessMap = node.material.roughnessMap;
-								newMat.roughness = node.material.roughness;
-								newMat.bumpMap = node.material.bumpMap;
-								newMat.bumpScale = node.material.bumpScale;
-								newMat.specularMap = node.material.specularMap;
-								node.material = newMat;
-								node.material.shininess = 2;
-								node.castShadow = true; 
-							}
-						});
-						scene.add( gltf.scene );
-					},
-					function ( xhr ) {
-						console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded - treegarden1' );
-
-					},
-					function ( error ) {
-						console.log( 'An error happened' );
-					}
-				);
-			}
-
-			//tree garden 2
-			function treegarden2(){
-				gltfLoader.load(
-					'models/gltf/trees/tree2/scene.gltf',
-					function ( gltf ) {
-						var newMat = new THREE.MeshPhongMaterial();
-						gltf.scene.position.set(-50, 35 ,-450);
-						gltf.scene.scale.set(30, 30 , 30);
-						gltf.scene.traverse(function(node){
-							if (node instanceof THREE.Mesh){
-								newMat.map = node.material.map;
-								newMat.normalMap = node.material.normalMap;
-								newMat.roughnessMap = node.material.roughnessMap;
-								newMat.roughness = node.material.roughness;
-								newMat.bumpMap = node.material.bumpMap;
-								newMat.bumpScale = node.material.bumpScale;
-								newMat.specularMap = node.material.specularMap;
-								node.material = newMat;
-								node.material.shininess = 2;
-								node.castShadow = true; 
-							}
-						});
-						scene.add( gltf.scene );
-					},
-					function ( xhr ) {
-						console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded treegarden2' );
-					},
-					function ( error ) {
-						console.log( 'An error happened' );
-					}
-				);
-			}
-			//Duck
-			function duck(){
-				gltfLoader.load('js/examples/models/gltf/Duck/glTF/Duck.gltf', function( gltf ) {
-			
-						gltf.scene.traverse(function(node){
-							if (node instanceof THREE.Mesh){
-								node.castShadow = true; 
-							}
-						});
-						gltf.scene.position.set(0, 10, 0);
-						scene.add( gltf.scene );
-					}
-				);
-			}
-
-			//pennywise
-			function pennywise(){
-				gltfLoader.load('models/gltf/pennywise/scene.gltf', 
-					function(gltf){
-						gltf.scene.traverse(function(node){
-							if(node instanceof THREE.Mesh){
-								node.castShadow = true;
-							}
-						});
-						gltf.scene.scale.set(10, 10 , 10);
-						gltf.scene.position.set(0, 0, -300);
-						scene.add(gltf.scene);
-						pennywise = gltf.scene;
-			
-					},
-					function ( xhr ) {
-						console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded pennywise' );
-					},
-					function ( error ) {
-						console.log( 'An error happened' );
-					}
-				)
-			}
+		flashsource.position.set(2, -2, -10.5);
+		
+		
+		treegarden1();
+		treegarden2();
+		duck();
+		pennywise(); 
+		
 		
 
 		//Audio
-			//horrortheme
-			function horrortheme(){
-				
-				camera.add( listener );
-				var audioLoader = new THREE.AudioLoader();
-				audioLoader.load( 'audio/clown/horror3.wav', function( buffer ) {
-					sound.setBuffer( buffer );
-					sound.setLoop( true );
-					sound.setVolume( 0.5 );
-					sound.play();
-				
-				});
+		horrortheme();
+		flashlightclick()
+		footstepsgrass();
+		clownlaugh();
+		//bennyhill()
+		
+
+		
+		
+	
+	//player
+		/* playerGeo = new THREE.BoxGeometry(5, 10, 5, 8, 8, 8);
+			playerMat = new THREE.MeshPhongMaterial({
+			transparent: true,
+			opacity: 1,
+			wireframe: true
+		})
+		me = new THREE.Mesh(playerGeo,playerMat);
+		scene.add(me);
+		me.position.set(camera.position.x, camera.position.y, camera.position.z); */
+		
+
+		animate();
+	
+	}
+
+	function onWindowResize() {
+		camera.aspect = window.innerWidth / window.innerHeight;
+		camera.updateProjectionMatrix();
+		renderer.setSize( window.innerWidth, window.innerHeight );
+	}
+
+	//Animete loop
+		function animate() {
+			requestAnimationFrame( animate );
+			renderer.render( scene, camera );
+			scene.simulate();
+			
+			if('undefined' !== typeof flash){
+			}
+			//flashsource movement
+			flashsource.target.position.set(flashsource.position.x, flashsource.position.y, flashsource.position.z -1);
+
+			//pennywise movement
+			if('undefined' !== typeof pennywise){
+				pennywise.lookAt(controls.getObject().position);
 			}
 
-			//flashlight click
-			function flashlightclick(){
-				var audioLoader = new THREE.AudioLoader();
-				audioLoader.load( 'audio/sounds/flashlight.wav', function( buffer ) {
-					flashlightSound.setBuffer( buffer );
-					flashlightSound.setVolume( 1.0 );
-					flashlightSound.isPlaying = false;
-				});
-			}
 
-			//footsteps grass
-			function footstepsgrass(){
-				var audioLoader = new THREE.AudioLoader();
-				audioLoader.load( 'audio/sounds/footstepsgrass.wav', function( buffer ) {
-					footstepsGrassSound.setBuffer( buffer );
-					footstepsGrassSound.setVolume( 1.0 );
-					footstepsGrassSound.isPlaying = false;
-				});
-			}
-			function clownlaugh(){
-				var audioLoader = new THREE.AudioLoader();
-				audioLoader.load( 'audio/clown/clownlaugh2.wav', function( buffer ) {
-					clownlaughSound.setBuffer( buffer );
-					clownlaughSound.setLoop(true);
-					clownlaughSound.setVolume( 1.0 );
-					clownlaughSound.play();
+			//player
+			//me.position.set(controls.getObject().position.x, controls.getObject().position.y, controls.getObject().position.z);
+			
+			
+			//pointlight movement
+			if(pointLight.position.y >= 24 && pointLightDir ==1){
+					pointLightDir = -1;
+				} else if (pointLightDir == 1 && pointLight.position.y != 0){
+					pointLight.position.y += 0.05;
+				} else if(pointLightDir == -1 && pointLight.position.y > 0){
+					pointLight.position.y -= 0.05;
+				} else if (pointLight.position.y <= 0 && pointLightDir == -1){
+					pointLightDir = 1;
+				} 
+				
+				//var originPoint = me.position.clone();
+
+				/*for (var vertexIndex = 0; vertexIndex < me.geometry.vertices.length; vertexIndex++)
+				{       
+					var localVertex = me.geometry.vertices[vertexIndex].clone();
+					var globalVertex = localVertex.applyMatrix4( me.matrix );
+					var directionVector = globalVertex.sub( me.position );
+
+					var ray = new THREE.Raycaster( originPoint, directionVector.clone().normalize() );
+					var collisionResults = ray.intersectObjects( hitObj );
+					if ( collisionResults.length > 0 && collisionResults[0].distance < directionVector.length() ) {
+						
+						velocity.y = Math.max(0, velocity.y);
+						canJump = true;
+					} else  if ( collisionResults.length == 0){
+					}
+						
+				}  */
+
+				
 					
-				});
+				
+			//Control
+			if(controlsEnabled){
+				
+
+				raycaster.ray.origin.copy(controls.getObject().position);
+				raycaster.ray.origin.y -= player.height;
+				var intersectionsOn = raycaster.intersectObjects(hitObj);
+				var onObject = intersectionsOn.length >0;
+				var instersectionsUnder = raycaster.intersectObjects(hitUnderObj);
+				var underObj = instersectionsUnder.length >0;
+			
+				var time = performance.now();
+				var delta = ( time - prevTime ) / 1000;
+				velocity.x -= velocity.x * 10.0 * delta;
+				velocity.z -= velocity.z * 10.0 * delta;
+				velocity.y -= 9.8 * 50.0 * delta; // 100.0 = mass
+				direction.z = Number( moveForward ) - Number( moveBackward );
+				direction.x = Number( moveLeft ) - Number( moveRight );
+				direction.normalize(); // this ensures consistent movements in all directions
+				if ( moveForward || moveBackward ) velocity.z -= direction.z * 400.0 * delta;
+				if ( moveLeft || moveRight ) velocity.x -= direction.x * 400.0 * delta;
+
+				if(onObject === true){
+					velocity.y = Math.max(0, velocity.y);
+					canJump = true;
+				} 
+				
+				controls.getObject().translateX( 2*velocity.x * delta );
+				controls.getObject().translateY( velocity.y * delta  );
+				controls.getObject().translateZ( 2*velocity.z * delta );
+				if ( controls.getObject().position.y < player.height ) {
+					velocity.y = 0;
+					controls.getObject().position.y = player.height;
+					canJump = true;
+				}
+				prevTime = time;
+
+				
+				
+			}
+
+			//Audio loop
+			
+
+		
+		}
+	
+
+	//Key Actions
+	function keyDown(event){
+		switch ( event.keyCode ) {
+					case 38: // up
+					case 87: // w
+						moveForward = true;
+						if( footstepsGrassSound.isPlaying == true){
+							break;
+						} else{
+						footstepsGrassSound.play();
+						break;
+						}
+					case 37: // left
+					case 65: // a
+						moveLeft = true; 
+						if( footstepsGrassSound.isPlaying == true){
+							break;
+						} else{
+						footstepsGrassSound.play();
+						break;
+						}
+					case 40: // down
+					case 83: // s
+						moveBackward = true;
+						if( footstepsGrassSound.isPlaying == true){
+							break;
+						} else{
+						footstepsGrassSound.play();
+						break;
+						}
+					case 39: // right
+					case 68: // d
+						moveRight = true;
+						if( footstepsGrassSound.isPlaying == true){
+							break;
+						} else{
+						footstepsGrassSound.play();
+						break;
+						}
+					case 32: // space
+						if ( canJump === true ) velocity.y += 150;
+						canJump = false;
+						break;
+					case 70: // f flashlight
+						if( flashOn === false) {
+							flashlightSound.play();
+							flashOn = true;
+							flashsource.intensity = 0;
+							break;
+							} else {
+								if(flashlightSound.isPlaying == true){
+								flashlightSound.stop();
+								}
+							flashlightSound.play();
+							flashOn = false;
+							flashsource.intensity =1000;
+							break;
+						}
+					case 80: //p
+						if(sound.isPlaying == true){
+							sound.pause();
+							break;
+						} else {
+							sound.play() = true;
+							break;
+						}
+		}
+	}
+
+	function keyUp(event){
+		switch( event.keyCode ) {
+					case 38: // up
+					case 87: // w
+						moveForward = false;
+						if(moveBackward == true || moveLeft == true || moveRight == true) {
+							break
+						} else {
+							footstepsGrassSound.stop();
+							break;
+						}
+					case 37: // left
+					case 65: // a
+						moveLeft = false;
+						if(moveBackward == true || moveForward == true || moveRight == true) {
+							break
+						} else {
+							footstepsGrassSound.stop();
+							break;
+						}
+					case 40: // down
+					case 83: // s
+						moveBackward = false;
+						if(moveForward == true || moveLeft == true || moveRight == true) {
+							break
+						} else {
+							footstepsGrassSound.stop();
+							break;
+						}
+					case 39: // right
+					case 68: // d
+						moveRight = false;
+						if(moveBackward == true || moveLeft == true || moveForward == true) {
+							break
+						} else {
+							footstepsGrassSound.stop();
+							break;
+						}
+		}
+	}
+
+	window.addEventListener('keydown', keyDown, false);
+	window.addEventListener('keyup', keyUp, false);
+	
+
+
+	//functions for objects
+		//flashlight object
+		function flashlight(){
+			var colladaLoader = new THREE.ColladaLoader();
+			var textureLoader = new THREE.TextureLoader();
+			var dae;
+			colladaLoader.load('models/dae/flashlight/source/model.dae', function(collada){
+				dae = collada.scene;
+				dae.traverse( function ( node ) {
+					if ( node instanceof THREE.Mesh){
+						node.material.map = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_albedo.jpeg');
+						node.material.normalMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_normal.png');
+						node.material.aoMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_AO.jpeg');
+						node.material.emissiveMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_emissive.jpeg');
+						node.material.metalnessMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_metallic.jpeg');
+						node.material.roughnessMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_roughness.jpeg');
+					} 
+				}); 
+
+
+				dae.scale.set(3, 3 , 3);
+				scene.add(dae);
+				flash = dae;
+				controls.getObject2().add(dae);
+				dae.rotation.y += Math.PI / 2.0;
+				dae.position.set(2, -2 , -10);
+		
+			},
+			function ( xhr ) {
+			console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+			},
+
+			function ( error ) {
+			console.log( 'An error happened' )
+			})
+			
 			}
 			
+		
+		//tree garden
+		function treegarden1(){
+			gltfLoader.load('models/gltf/trees/tree2/scene.gltf',
+				function ( gltf ) {
+					var newMat = new THREE.MeshPhongMaterial();
+					gltf.scene.position.set(20, 35 ,-450);
+					gltf.scene.scale.set(30, 30 , 30);
+
+					gltf.scene.traverse(function(node){
+						if (node instanceof THREE.Mesh){
+							newMat.map = node.material.map;
+							newMat.normalMap = node.material.normalMap;
+							newMat.roughnessMap = node.material.roughnessMap;
+							newMat.roughness = node.material.roughness;
+							newMat.bumpMap = node.material.bumpMap;
+							newMat.bumpScale = node.material.bumpScale;
+							newMat.specularMap = node.material.specularMap;
+							node.material = newMat;
+							node.material.shininess = 2;
+							node.castShadow = true; 
+						}
+					});
+					scene.add( gltf.scene );
+				},
+				function ( xhr ) {
+					console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded - treegarden1' );
+
+				},
+				function ( error ) {
+					console.log( 'An error happened' );
+				}
+			);
+		}
+
+		//tree garden 2
+		function treegarden2(){
+			gltfLoader.load(
+				'models/gltf/trees/tree2/scene.gltf',
+				function ( gltf ) {
+					var newMat = new THREE.MeshPhongMaterial();
+					gltf.scene.position.set(-50, 35 ,-450);
+					gltf.scene.scale.set(30, 30 , 30);
+					gltf.scene.traverse(function(node){
+						if (node instanceof THREE.Mesh){
+							newMat.map = node.material.map;
+							newMat.normalMap = node.material.normalMap;
+							newMat.roughnessMap = node.material.roughnessMap;
+							newMat.roughness = node.material.roughness;
+							newMat.bumpMap = node.material.bumpMap;
+							newMat.bumpScale = node.material.bumpScale;
+							newMat.specularMap = node.material.specularMap;
+							node.material = newMat;
+							node.material.shininess = 2;
+							node.castShadow = true; 
+						}
+					});
+					scene.add( gltf.scene );
+				},
+				function ( xhr ) {
+					console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded treegarden2' );
+				},
+				function ( error ) {
+					console.log( 'An error happened' );
+				}
+			);
+		}
+		//Duck
+		function duck(){
+			gltfLoader.load('js/examples/models/gltf/Duck/glTF/Duck.gltf', function( gltf ) {
+		
+					gltf.scene.traverse(function(node){
+						if (node instanceof THREE.Mesh){
+							node.castShadow = true; 
+						}
+					});
+					gltf.scene.position.set(0, 10, 0);
+					scene.add( gltf.scene );
+				}
+			);
+		}
+
+		//pennywise
+		function pennywise(){
+			gltfLoader.load('models/gltf/pennywise/scene.gltf', 
+				function(gltf){
+					gltf.scene.traverse(function(node){
+						if(node instanceof THREE.Mesh){
+							node.castShadow = true;
+						}
+					});
+					gltf.scene.scale.set(10, 10 , 10);
+					gltf.scene.position.set(0, 0, -300);
+					scene.add(gltf.scene);
+					pennywise = gltf.scene;
+					var pennyGeo = new THREE.BoxBufferGeometry(1, 1, 1);
+					var pennyMat = new THREE.MeshBasicMaterial({
+						transparent:true,
+						opacity: 0,
+					})
+					pennyAudio = new THREE.Mesh(pennyGeo, pennyMat);
+					pennyAudio.position.set(pennywise.position.x, pennywise.position.y + player.height, pennywise.position.z);
+					scene.add(pennyAudio);
+					pennywise.add(clownlaughSound);
+					
+		
+				},
+				function ( xhr ) {
+					console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded pennywise' );
+					
+
+				},
+				function ( error ) {
+					console.log( 'An error happened' );
+				}
+			)
+		}
 	
-	
-	
+
+	//Audio
+		//horrortheme
+		function horrortheme(){
+			
+			camera.add( listener );
+			var audioLoader = new THREE.AudioLoader();
+			audioLoader.load( 'audio/clown/horror3.wav', function( buffer ) {
+				sound.setBuffer( buffer );
+				sound.setLoop( true );
+				sound.setVolume( 0.5 );
+				sound.play();
+			
+			});
+		}
+
+		//flashlight click
+		function flashlightclick(){
+			var audioLoader = new THREE.AudioLoader();
+			audioLoader.load( 'audio/sounds/flashlight.wav', function( buffer ) {
+				flashlightSound.setBuffer( buffer );
+				flashlightSound.setVolume( 1.0 );
+				flashlightSound.isPlaying = false;
+			});
+		}
+
+		//footsteps grass
+		function footstepsgrass(){
+			var audioLoader = new THREE.AudioLoader();
+			audioLoader.load( 'audio/sounds/footstepsgrass.wav', function( buffer ) {
+				footstepsGrassSound.setBuffer( buffer );
+				footstepsGrassSound.setVolume( 1.0 );
+				footstepsGrassSound.isPlaying = false;
+			});
+		}
+		
+		//clownlaugh
+		function clownlaugh(){
+			var audioLoader = new THREE.AudioLoader();
+			audioLoader.load( 'audio/clown/clownlaugh2.wav', function( buffer ) {
+				clownlaughSound.setBuffer( buffer );
+				clownlaughSound.setLoop(true);
+				clownlaughSound.setRefDistance(20);
+				clownlaughSound.setVolume( 0.5 );
+				clownlaughSound.play();
+				
+				
+			});
+		}
+		
+		//benny hill
+		function bennyhill(){
+			var audioLoader = new THREE.AudioLoader();
+			audioLoader.load( 'audio/music/Benny_Hill_Theme.mp3', function( buffer ) {
+				sound.setBuffer( buffer );
+				sound.setLoop( true );
+				sound.setVolume( 0.5 );
+				sound.play();
+			
+			});
+		}
+
+
+
 	window.onload = init;
 	
 	</script>
