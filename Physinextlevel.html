@@ -80,29 +80,35 @@
 	Physijs.scripts.worker = 'js/libs/physijs_worker.js';
 	Physijs.scripts.ammo = 'ammo.js'; //location from worker as source
 	
-	//objects
+	
 	var scene, camera, renderer, controls; 
 	var pointLightDir;
-	var cube, floor, floor2, pointLight, podestObj, wallnorm; //Objekte
-	var wall = [];
+
+	//background
+	var cube, floor, floor2, pointLight, podestObj, wallnorm;
+	var podest = {height: 5 , width: 202, length: 202};
+	var wallNmb = [];
 	var bar = [];
 	var windows = [];
 	var houseGroup = new THREE.Group();
-	var raycaster;
-	var hitObj = [];
-	var hitUnderObj = [];
+	
+	
 	var me, playerGeo, playerMat;
 	var texture;
 	
+	//functions
 	var gltfLoader = new THREE.GLTFLoader();
+	var raycaster;
+	var hitObj = [];
+	var hitUnderObj = [];
 
-	
+	//objects
 	var player = {height: 10, speed: 1, arrowspeed: 0.01};
 	var flash, flashsource;
 	var flashVector = new THREE.Vector3();
 	var pennywise, pennyAudio;
 
-	var podest = {height: 5 , width: 100, length: 100};
+
 	
 	//keyboard
 	var keyboard= {};
@@ -112,9 +118,6 @@
 	var moveRight = false;
 	var canJump = false;
 	var flashOn = false;
-
-
-
 
 	var prevTime = performance.now();
 	var velocity = new THREE.Vector3();
@@ -205,8 +208,8 @@
 
 		
 		//Licht
-		var ambiLight = new THREE.AmbientLight( 0xddeeff, 0.01 );
-			scene.add( ambiLight );
+		var ambiLight = new THREE.AmbientLight( 0xddeeff, 0.5 );
+		scene.add( ambiLight );
 
 		pointLight = new THREE.PointLight(0xffee88, 200, 100, 2);
 		scene.add(pointLight);
@@ -214,12 +217,12 @@
 		pointLight.castShadow = true;
 		pointLightDir = 1;
 
-		var pointLightTrees = new THREE.SpotLight(0xffee88, 50000, 800, 1, 1 , 2);
+		/*var pointLightTrees = new THREE.SpotLight(0xffee88, 50000, 800, 1, 1 , 2);
 		scene.add(pointLightTrees);
 		pointLightTrees.position.set(0, 50, -600);
 		pointLightTrees.castShadow = true;
 		pointLightTrees.shadowDarkness = 10;
-
+		*/
 		/*var dirLight = new THREE.DirectionalLight(0xffffff, 0.03);
 		scene.add(dirLight);
 		dirLight.position.set(0 , 200, -500);
@@ -244,14 +247,14 @@
 			map.wrapS = THREE.RepeatWrapping;
 			map.wrapT = THREE.RepeatWrapping;
 			map.anisotropy = 4;
-			map.repeat.set( 16, 2 );
+			map.repeat.set( 32, 2 );
 			podestMat.map = map;
 
 			texture = textureLoader.load('images/textures/stonewall1norm.jpg'); //normal map
 			texture.wrapS =THREE.RepeatWrapping;
 			texture.wrapT = THREE.RepeatWrapping;
 			texture.anisotropy = 4;
-			texture.repeat.set(  16, 2);
+			texture.repeat.set(  32, 2);
 			podestMat.normalMap = texture;
 			podestMat.needsUpdate = true; 
 		});
@@ -262,7 +265,7 @@
 		hitObj.push(podestObj);
 
 		//Floor
-		var floorGeo = new THREE.PlaneBufferGeometry(100, 100);
+		var floorGeo = new THREE.PlaneBufferGeometry(podest.width, podest.width);
 		var floorMat = new THREE.MeshStandardMaterial( {
 				roughness: 0.8,
 				color: 0xffffff,
@@ -312,170 +315,104 @@
 				roughness: 0.8,
 				color: 0xffffff,
 				metalness: 0.0,
-				bumpScale: 0.5};
+				bumpScale: 0.5,
+	
+			};
 
-			var wallGeo0 = new THREE.BoxBufferGeometry(45, 25, 1);
-			var wallMat = new THREE.MeshStandardMaterial({wallStyle});
-			
+			var wall = {height: 35, width: 200}
+			var wallMat = new THREE.MeshStandardMaterial({wallStyle, side: THREE.DoubleSide});
 			textureLoader.load('images/textures/stonewall2.jpg', function( map){
-				map.wrapS = THREE.RepeatWrapping; //color map
+				map.wrapS = THREE.RepeatWrapping;
 				map.wrapT = THREE.RepeatWrapping;
 				map.anisotropy = 4;
-				map.repeat.set( wallwraps, wallwrapt );
+				map.repeat.set( 0.3 , 0.3);
 				wallMat.map = map;
 
 				texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
 				texture.wrapS =THREE.RepeatWrapping;
 				texture.wrapT = THREE.RepeatWrapping;
 				texture.anisotropy = 4;
-				texture.repeat.set( wallwraps, wallwrapt);
+				texture.repeat.set(  0.4 , 0.4);
 				wallMat.normalMap = texture;
-				wallMat.needsUpdate = true;
+				wallMat.needsUpdate = true; 
 			});
 
-			wall[0] = new Physijs.BoxMesh( wallGeo0, wallMat);
-			wall[0].position.set(27.5, 12.5, 50);
-			wall[0].receiveShadow = true;
+
+			var wallFrontShape = new THREE.Shape();
+			wallFrontShape.moveTo(0 , 0);
+			wallFrontShape.lineTo(0, wall.height);
+			wallFrontShape.lineTo(wall.width +1, wall.height);
+			wallFrontShape.lineTo(wall.width +1, 0);
+
+			var wallFrontDoor = new THREE.Path(); //hole for door
+			wallFrontDoor.moveTo((wall.width / 2) - 10, 0);
+			wallFrontDoor.lineTo((wall.width / 2) - 10, wall.height - 5);
+			wallFrontDoor.lineTo((wall.width / 2) + 10, wall.height - 5);
+			wallFrontDoor.lineTo((wall.width / 2) + 10, 0);
+
+			var wallFrontWinS = new THREE.Path(); //left hole for small window
+			wallFrontWinS.moveTo((wall.width / 2) - 40, 5);
+			wallFrontWinS.lineTo((wall.width / 2) - 40, wall.height - 5);
+			wallFrontWinS.lineTo((wall.width / 2) -33, wall.height - 5);
+			wallFrontWinS.lineTo((wall.width / 2) -33, 5);
+
+			var wallFrontWinS2 = new THREE.Path(); //right hole for small window
+			wallFrontWinS2.moveTo((wall.width / 2) + 40, 5);
+			wallFrontWinS2.lineTo((wall.width / 2) + 40, wall.height - 5);
+			wallFrontWinS2.lineTo((wall.width / 2) +33, wall.height - 5);
+			wallFrontWinS2.lineTo((wall.width / 2) +33, 5);
+
+			wallFrontShape.holes.push(wallFrontDoor, wallFrontWinS, wallFrontWinS2);
+
+			var extrudeSettings = { amount: 1, bevelEnabled: false, depth: 0.2 };
+
+			var wallFrontExt = new THREE.ExtrudeBufferGeometry(wallFrontShape, extrudeSettings);
+			wallNmb[0] = new THREE.Mesh(wallFrontExt, wallMat);
+			wallNmb[0].position.set(-100, 5, 100);
+			scene.add(wallNmb[0]);
+
+
+
+			/*
+			var wallGeo12 = new THREE.Shape();
+			wallGeo12.moveTo(0, 0);
+			wallGeo12.lineTo(0, 35);
+			wallGeo12.lineTo(50, 35);
+			wallGeo12.lineTo(50, 0);
 			
-			wall[1] = new THREE.Mesh(wallGeo0, wallMat);
-			wall[1].position.set(-27.5, 12.5 , 50);
+			var wallMat12 = new THREE.MeshStandardMaterial({side: THREE.DoubleSide});
+			textureLoader.load('images/textures/stonewall2.jpg', function( map){
+				map.wrapS = THREE.RepeatWrapping;
+				map.wrapT = THREE.RepeatWrapping;
+				map.anisotropy = 4;
+				map.repeat.set( 0.3 , 0.3);
+				wallMat12.map = map;
+
+				texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
+				texture.wrapS =THREE.RepeatWrapping;
+				texture.wrapT = THREE.RepeatWrapping;
+				texture.anisotropy = 4;
+				texture.repeat.set(  0.4 , 0.4);
+				wallMat12.normalMap = texture;
+				wallMat12.needsUpdate = true; 
+			});
+
+
+			var wallHole12 = new THREE.Path();
+			wallHole12.moveTo(20, 10);
+			wallHole12.lineTo(20, 25);
+			wallHole12.lineTo(30, 25);
+			wallHole12.lineTo(30, 10);
+
+			wallGeo12.holes.push(wallHole12);
+			var extrudeSettings = { amount: 1, bevelEnabled: false, depth: 0.2 };
+			var wall12 = new THREE.ExtrudeBufferGeometry(wallGeo12, extrudeSettings);
+			
+			wall[12] = new THREE.Mesh(wall12, wallMat12);
+			*/
+			
 			
 
-			var wallGeo2 = new THREE.BoxBufferGeometry(10,10,1);
-			var wallMat2 = new THREE.MeshStandardMaterial({wallStyle});
-			textureLoader.load('images/textures/stonewall2.jpg', function( map){
-				map.wrapS = THREE.RepeatWrapping;
-				map.wrapT = THREE.RepeatWrapping;
-				map.anisotropy = 4;
-				map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo2.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo2.parameters.height );
-				wallMat2.map = map;
-
-				texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
-				texture.wrapS =THREE.RepeatWrapping;
-				texture.wrapT = THREE.RepeatWrapping;
-				texture.anisotropy = 4;
-				texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo2.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo2.parameters.height);
-				wallMat2.normalMap = texture;
-				wallMat2.needsUpdate = true; 
-			});
-			wall[2] = new Physijs.BoxMesh(wallGeo2, wallMat2);
-			wall[2].position.set(0, 20, 50);
-			
-
-			//wall (garden)
-			var wallGeo3 = new THREE.BoxBufferGeometry(10,25, 1);
-			var wallMat3 = new THREE.MeshStandardMaterial({wallStyle});
-			textureLoader.load('images/textures/stonewall2.jpg', function( map){
-				map.wrapS = THREE.RepeatWrapping;
-				map.wrapT = THREE.RepeatWrapping;
-				map.anisotropy = 4;
-				map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo3.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo3.parameters.height );
-				wallMat3.map = map;
-
-				texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
-				texture.wrapS =THREE.RepeatWrapping;
-				texture.wrapT = THREE.RepeatWrapping;
-				texture.anisotropy = 4;
-				texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo3.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo3.parameters.height);
-				wallMat3.normalMap = texture;
-				wallMat3.needsUpdate = true; 
-			});
-			wall[3] = new Physijs.BoxMesh(wallGeo3, wallMat3); //wall right
-			wall[3].position.set(45, 12.5, -50);
-
-			wall[4] = new Physijs.BoxMesh(wallGeo3, wallMat3); //wall left
-			wall[4].position.set(-45, 12.5, -50);
-
-			var wallGeo5 = new THREE.BoxBufferGeometry(80, 5, 1);
-			var wallMat5 = new THREE.MeshStandardMaterial({wallStyle});
-			textureLoader.load('images/textures/stonewall2.jpg', function( map){
-				map.wrapS = THREE.RepeatWrapping;
-				map.wrapT = THREE.RepeatWrapping;
-				map.anisotropy = 4;
-				map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo5.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo5.parameters.height );
-				wallMat5.map = map;
-
-				texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
-				texture.wrapS =THREE.RepeatWrapping;
-				texture.wrapT = THREE.RepeatWrapping;
-				texture.anisotropy = 4;
-				texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo5.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo5.parameters.height);
-				wallMat5.normalMap = texture;
-				wallMat5.needsUpdate = true; 
-			});
-			wall[5] = new Physijs.BoxMesh( wallGeo5, wallMat5); //wall top
-			wall[5].position.set(0, 22.5, -50);
-
-			var wallGeo6= new THREE.BoxBufferGeometry(20, 1, 1);
-			var wallMat6 = new THREE.MeshStandardMaterial({wallStyle});
-			textureLoader.load('images/textures/stonewall2.jpg', function( map){
-				map.wrapS = THREE.RepeatWrapping;
-				map.wrapT = THREE.RepeatWrapping;
-				map.anisotropy = 4;
-				map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo6.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo6.parameters.height );
-				wallMat6.map = map;
-
-				texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
-				texture.wrapS =THREE.RepeatWrapping;
-				texture.wrapT = THREE.RepeatWrapping;
-				texture.anisotropy = 4;
-				texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo6.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo6.parameters.height);
-				wallMat6.normalMap = texture;
-				wallMat6.needsUpdate = true; 
-			});
-			wall[6] = new Physijs.BoxMesh(wallGeo6, wallMat6); //wall left low
-			wall[6].position.set(-30, 0.5, -50);
-			
-			wall[7] = new Physijs.BoxMesh(wallGeo6, wallMat6); //wall right low
-			wall[7].position.set(30, 0.5, -50);
-
-			var wallGeo8 = new THREE.BoxBufferGeometry(1, 19, 1);
-			var wallMat8 = new THREE.MeshStandardMaterial({wallStyle});
-			textureLoader.load('images/textures/stonewall2.jpg', function( map){
-				map.wrapS = THREE.RepeatWrapping;
-				map.wrapT = THREE.RepeatWrapping;
-				map.anisotropy = 4;
-				map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo8.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo8.parameters.height );
-				wallMat8.map = map;
-
-				texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
-				texture.wrapS =THREE.RepeatWrapping;
-				texture.wrapT = THREE.RepeatWrapping;
-				texture.anisotropy = 4;
-				texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo8.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo8.parameters.height);
-				wallMat8.normalMap = texture;
-				wallMat8.needsUpdate = true; 
-			});
-			wall[8] = new Physijs.BoxMesh(wallGeo8, wallMat8); //wall left between
-			wall[8].position.set(-20.5, 10.5, -50);
-			wall[9] = new Physijs.BoxMesh(wallGeo8, wallMat8); //wall right between
-			wall[9].position.set(20.5, 10.5, -50);
-
-			var wallGeo10 = new THREE.BoxBufferGeometry(100, 25, 1);
-			var wallMat10 = new THREE.MeshStandardMaterial([wallStyle]);
-			textureLoader.load('images/textures/stonewall2.jpg', function( map){
-				map.wrapS = THREE.RepeatWrapping;
-				map.wrapT = THREE.RepeatWrapping;
-				map.anisotropy = 4;
-				map.repeat.set( (wallwraps/wallGeo0.parameters.width) * wallGeo10.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo10.parameters.height );
-				wallMat10.map = map;
-
-				texture = textureLoader.load('images/textures/stonewall2norm.jpg'); //normal map
-				texture.wrapS =THREE.RepeatWrapping;
-				texture.wrapT = THREE.RepeatWrapping;
-				texture.anisotropy = 4;
-				texture.repeat.set(  (wallwraps/wallGeo0.parameters.width) * wallGeo10.parameters.width , (wallwrapt/wallGeo0.parameters.height) *wallGeo10.parameters.height);
-				wallMat10.normalMap = texture;
-				wallMat10.needsUpdate = true; 
-			});
-
-			wall[10] = new Physijs.BoxMesh(wallGeo10, wallMat10); //wall left
-			wall[10].position.set(-50, 12.5, 0);
-			wall[10].rotation.y = Math.PI /2.0;
-
-			wall[11] = new THREE.Mesh(wallGeo10, wallMat10); //wall right
-			wall[11].position.set(50, 12.5, 0);
-			wall[11].rotation.y = Math.PI /2.0;
 
 			for(var i = 0; i <= (wall.length-1); i++){
 				wall[i].castShadow = true;
@@ -541,7 +478,7 @@
 
 			//ceiling
 			var ceilingGeo = new THREE.PlaneBufferGeometry(100 , 100 );
-			var ceilingMat = new THREE.MeshStandardMaterial({wallStyle, side: THREE.DoubleSide});
+			var ceilingMat = new THREE.MeshStandardMaterial({wallStyle});
 			textureLoader.load('images/textures/ceiling.png', function( map){
 				map.wrapS = THREE.RepeatWrapping;
 				map.wrapT = THREE.RepeatWrapping;
@@ -553,7 +490,7 @@
 			});
 			var ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
 			houseGroup.add(ceiling);
-			ceiling.position.set(0, 25, 0);
+			ceiling.position.set(0, 35, 0);
 			ceiling.rotation.x = Math.PI / 2.0;
 			ceiling.receiveShadow = true;
 			ceiling.castShadow = true;
@@ -595,7 +532,7 @@
 
 		//Outside
 		var floorGeo2 = new THREE.BoxBufferGeometry(1000, 1000, 0.1);
-		var floorMat2 = new THREE.MeshLambertMaterial({
+		var floorMat2 = new THREE.MeshPhongMaterial({
 		});
 		textureLoader.load("js/examples/textures/terrain/grasslight-big.jpg", function( map) {
 			map.wrapS = THREE.RepeatWrapping;
@@ -617,6 +554,7 @@
 		floor2.rotation.x = -Math.PI / 2.0;
 		floor2.receiveShadow = true;
 		floor2.castShadow = true;
+		floor2.position.set(0, 0.01, 0);
 		scene.add(floor2);
 
 		
@@ -634,8 +572,9 @@
 		
 		//Flashlight - flash = object, flashsource = lightsource
 		flashlight(); //creates Flashlight "flash"
-		flashsource = new THREE.SpotLight(0xffffff, 1000, 200, 0.15, 0.25, 2);
+		flashsource = new THREE.SpotLight(0xffffff, 1000, 300, 0.10, 0.25, 2);
 		flashsource.castShadow = true;
+		flashsource.shadow.bias = - 0.001;
 		scene.add(flashsource);
 		scene.add(flashsource.target);
 		controls.getObject2().add(flashsource);
@@ -652,10 +591,10 @@
 		
 
 		//Audio
-		horrortheme();
+		//horrortheme();
 		flashlightclick()
 		footstepsgrass();
-		clownlaugh();
+		//clownlaugh();
 		//bennyhill()
 		
 
