@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+        </style>
+    </head>
+    <body>
+        <script src="js/build/three.js"></script>
+        <script src="js\src\loaders\TextureLoader.js" ></script>
+        <script src="js\examples\js\loaders\ColladaLoader.js" ></script>
+        <script src="js\examples\js\loaders\GLTFLoader.js"></script>
+        <script src="js\examples\js\loaders\OBJLoader.js"></script>
+        <script src="js\examples\js\vr\ViveController.js"></script>
+        <script src="js\examples\js\vr\WebVR.js"></script>
+
+        <script>
+        var scene, render, renderer, camera, viveController, cube;
+
+        init();
+        render();
+
+        function init(){
+            scene = new THREE.Scene();
+
+            renderer = new THREE.WebGLRenderer({antialias:true});
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.vr.enabled = true;
+            renderer.vr.standing = true;
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            document.body.appendChild(renderer.domElement);
+            //WEBVR BUTTON
+            document.body.appendChild(WEBVR.createButton(renderer));
+
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+            scene.add(camera);
+
+            var floorGeo = new THREE.PlaneBufferGeometry(200, 200, 20, 20);
+			var floorMat = new THREE.MeshStandardMaterial({color: 0xffff00, wireframe: true});
+			var floor = new THREE.Mesh(floorGeo, floorMat);
+			floor.rotateX(-90* Math.PI/180);
+			scene.add(floor);
+
+            var ambi = new THREE.AmbientLight(0xffffff, 1);
+            scene.add(ambi);
+
+            var cubeGeo = new THREE.BoxBufferGeometry(2,2,2);
+                var cubeMat = new THREE.MeshStandardMaterial({color: 0x00ff00});
+                cube = new THREE.Mesh(cubeGeo, cubeMat);
+                scene.add(cube);
+                cube.position.set(camera.position.x, camera.position.y, camera.position.z -5);
+			
+			
+		//Objects
+			
+            
+            viveController = new THREE.ViveController(0);
+            viveController.standingMatrix = renderer.vr.getStandingMatrix();
+            scene.add(viveController);
+            loadController();
+
+
+        }
+
+        function render(){
+            renderer.setAnimationLoop(render);
+            renderer.render(scene, camera);
+            viveController.update();
+        }
+
+        function loadController() {
+	
+        var loader = new THREE.OBJLoader();
+        loader.setPath('models/obj/vive-controller/');
+        loader.load('vr_controller_vive_1_5.obj', function(object) {
+                var loader = new THREE.TextureLoader();
+                loader.setPath('models/obj/vive-controller/');
+                var controller = object.children[0];
+                controller.material.map = loader.load('onepointfive_texture.png');
+                controller.material.specularMap = loader.load('onepointfive_spec.png');
+                viveController.add(object.clone());
+            });
+        }
+        
+        viveController.addEventListener('triggerdown', onTriggerDown);
+        viveController.addEventListener('triggerup', onTriggerUp);
+        viveController.addEventListener('thumbpaddown', onThumbpadDown);
+        viveController.addEventListener('thumbpadup', onThumbpadUp);
+        viveController.addEventListener('gripsdown', onGripsDown);
+        viveController.addEventListener('gripsup', onGripsUp);
+
+        function onTriggerDown(){
+            if (viveController.getButtonState('trigger') === true){
+               drag(cube);
+            }
+        }
+        function onTriggerUp(){
+            if (viveController.getButtonState('trigger') === false){
+                //scene.remove(cube);
+            }
+        }
+        
+        function drag(object){
+
+        }
+
+
+
+
+
+        </script>
+    </body>
+</html>
