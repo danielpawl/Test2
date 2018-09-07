@@ -15,6 +15,8 @@
 
         <script>
         var scene, render, renderer, camera, viveController, cube;
+        var dragCube = false;
+        var text;
 
         init();
         render();
@@ -38,7 +40,7 @@
             scene.add(camera);
 
             var floorGeo = new THREE.PlaneBufferGeometry(200, 200, 20, 20);
-			var floorMat = new THREE.MeshStandardMaterial({color: 0xffff00, wireframe: true});
+			var floorMat = new THREE.MeshStandardMaterial({color: 0xffffff});
 			var floor = new THREE.Mesh(floorGeo, floorMat);
 			floor.rotateX(-90* Math.PI/180);
 			scene.add(floor);
@@ -61,6 +63,15 @@
             scene.add(viveController);
             loadController();
 
+            var textGeo = new THREE.PlaneBufferGeometry(0.1, 0.2);
+            var textMat = new THREE.MeshBasicMaterial({color: 0xffff00, side: THREE.DoubleSide});
+            text = new THREE.Mesh(textGeo, textMat);
+            scene.add(text);
+            viveController.add(text);
+            text.position.set(0.2, 0 ,0 );
+
+
+
 
         }
 
@@ -68,6 +79,11 @@
             renderer.setAnimationLoop(render);
             renderer.render(scene, camera);
             viveController.update();
+            if(dragCube == true){
+                cube.position.y += 0.05;
+            }
+            
+           
         }
 
         function loadController() {
@@ -93,12 +109,12 @@
 
         function onTriggerDown(){
             if (viveController.getButtonState('trigger') === true){
-               drag(cube);
+               dragCube = true;
             }
         }
         function onTriggerUp(){
             if (viveController.getButtonState('trigger') === false){
-                //scene.remove(cube);
+                dragCube = false;
             }
         }
         
