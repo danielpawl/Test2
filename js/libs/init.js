@@ -75,6 +75,7 @@ function init(){
         scene.add(rayGroup);
 
         robo();
+        menu();
     
         
 
@@ -374,7 +375,7 @@ function createTutorial(){
 //==================== Configurator ===================================================================
 
 function menu(){
-
+    
     createMenu();                           //creates all objects for menu
 
     function createMenu(){                  //function for creating objects for menu
@@ -388,53 +389,56 @@ function menu(){
 
         modeGeo[0] = new THREE.PlaneBufferGeometry(0.05, 0.05);
         modeMat[0] = new THREE.MeshBasicMaterial({
-            map: loader.load('../images/symbols/mode_configurator.png'),
+            map: loader.load('./images/symbols/mode_configurator.png'),
             side: THREE.DoubleSide
         })
 
         modeGeo[1] = new THREE.PlaneBufferGeometry(0.05, 0.05);
         modeMat[1] = new THREE.MeshBasicMaterial({
-            map: loader.load('../images/symbols/mode_paint.png'),
+            map: loader.load('./images/symbols/mode_paint.png'),
             side: THREE.DoubleSide
         })
 
-        for (var i = 0; i <= mode.length; i++){
+        for (var i = 0; i <= 2; i++){
             mode[i] = new THREE.Mesh(modeGeo[i], modeMat[i]);
-        }
-
+        } 
+        
         modeFrameGeo = [];
         for (var i = 0; i <= mode.length; i++){
             modeFrameGeo[i] = [0 , 1 , 2 , 3];
 
             modeFrameGeo[i][0] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.005, 0.005, 0.05), new THREE.MeshBasicMaterial({color: 0xffffff}));   //top
-            modeFrameGeo[i][0].position.set(0 , 0 , (modeGeo[i].width/2.0) - modeFrameGeo[i][0].width );
+            modeFrameGeo[i][0].position.set(0 , 0 , (mode[i].width/2.0) - modeFrameGeo[i][0].width );
 
             modeFrameGeo[i][1] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.005, 0.005, 0.05), new THREE.MeshBasicMaterial({color: 0xffffff}));   //bottom
-            modeFrameGeo[i][0].position.set(0 , 0 , -1 * ((modeGeo[i].width/2.0) - modeFrameGeo[i][1].width) );
+            modeFrameGeo[i][0].position.set(0 , 0 , -1 * ((mode[i].width/2.0) - modeFrameGeo[i][1].width) );
 
             modeFrameGeo[i][2] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.005, 0.005, 0.03), new THREE.MeshBasicMaterial({color: 0xffffff}));   //left
-            modeFrameGeo[i][0].position.set((modeGeo[i].height/2.0) - modeFrameGeo[i][2].height , 0 , 0 );
+            modeFrameGeo[i][0].position.set((mode[i].height/2.0) - modeFrameGeo[i][2].height , 0 , 0 );
 
             modeFrameGeo[i][3] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.005, 0.005, 0.03), new THREE.MeshBasicMaterial({color: 0xffffff}));   //right
-            modeFrameGeo[i][0].position.set((modeGeo[i].height/2.0) - modeFrameGeo[i][3].height , 0 , 0 );
+            modeFrameGeo[i][0].position.set((mode[i].height/2.0) - modeFrameGeo[i][3].height , 0 , 0 );
 
 
-        }
+        } 
         
 
 
 
-
+        /*
         for (var i = 0; i <= mode.length; i++){
-            for (var j = 0; j <= 3, j++){
+            for (var j = 0; j <= 3; j++){
             mode[i].add(modeFrameGeo[i][j])
             }
             scene.add(mode[i]);
-            viveController.add(mode[i]);
-        }
+            //viveController.add(mode[i]);
+            camera.add(mode[i]);
+            mode[i].position.set(0, 0, -1);
+            console.log('Mode loaded');
+        } */
 
-    }
-
+    } 
+    
     function menuStep(menuStep){
         switch(menuStep){
             case 0:
@@ -446,7 +450,7 @@ function menu(){
             case 2:
                 break;
         }
-    }
+    } 
 }
 
 
