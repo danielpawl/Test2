@@ -130,38 +130,8 @@ THREE.ViveController = function ( id ) {
 	var color = new THREE.Color( 1, 1, 1 );
 	var size = 1.0;
 
-	//
+	paintActive = false;
 
-	function generateHueTexture() {
-
-		var canvas = document.createElement( 'canvas' );
-		canvas.width = 256;
-		canvas.height = 256;
-
-		var context = canvas.getContext( '2d' );
-		var imageData = context.getImageData( 0, 0, 256, 256 );
-		var data = imageData.data;
-		var swatchColor = new THREE.Color();
-
-		for ( var i = 0, j = 0; i < data.length; i += 4, j ++ ) {
-
-			var x = ( ( j % 256 ) / 256 ) - 0.5;
-			var y = ( Math.floor( j / 256 ) / 256 ) - 0.5;
-
-			swatchColor.setHSL( Math.atan2( y, x ) / PI2, 1,( 0.5 - Math.sqrt( x * x + y * y ) ) * 2.0 );
-
-			data[ i + 0 ] = swatchColor.r * 256;
-			data[ i + 1 ] = swatchColor.g * 256;
-			data[ i + 2 ] = swatchColor.b * 256;
-			data[ i + 3 ] = 256;
-
-		}
-
-		context.putImageData( imageData, 0, 0 );
-
-		return new THREE.CanvasTexture( canvas );
-
-	}
 
 	// COLOR UI
 
@@ -172,12 +142,15 @@ THREE.ViveController = function ( id ) {
 	colorUI.rotation.x = - 1.45;
 	colorUI.scale.setScalar( 0.02 );
 	this.add( colorUI );
+	
 
 	var geometry = new THREE.IcosahedronGeometry( 0.1, 2 );
 	var material = new THREE.MeshBasicMaterial();
 	material.color = color;
 	var ball = new THREE.Mesh( geometry, material );
 	colorUI.add( ball );
+
+	colorUI.visible = false;
 
 
 	// SIZE UI
@@ -210,10 +183,44 @@ THREE.ViveController = function ( id ) {
 	sizeUI.visible = false;
 
 
+	function generateHueTexture() {
+
+		var canvas = document.createElement( 'canvas' );
+		canvas.width = 256;
+		canvas.height = 256;
+
+		var context = canvas.getContext( '2d' );
+		var imageData = context.getImageData( 0, 0, 256, 256 );
+		var data = imageData.data;
+		var swatchColor = new THREE.Color();
+
+		for ( var i = 0, j = 0; i < data.length; i += 4, j ++ ) {
+
+			var x = ( ( j % 256 ) / 256 ) - 0.5;
+			var y = ( Math.floor( j / 256 ) / 256 ) - 0.5;
+
+			swatchColor.setHSL( Math.atan2( y, x ) / PI2, 1,( 0.5 - Math.sqrt( x * x + y * y ) ) * 2.0 );
+
+			data[ i + 0 ] = swatchColor.r * 256;
+			data[ i + 1 ] = swatchColor.g * 256;
+			data[ i + 2 ] = swatchColor.b * 256;
+			data[ i + 3 ] = 256;
+
+		}
+
+		context.putImageData( imageData, 0, 0 );
+
+		return new THREE.CanvasTexture( canvas );
+
+	}
+
+	
+
+
 
 	function onAxisChanged( event ) {
 
-		if ( this.getButtonState( 'thumbpad' ) === false ) return;
+		if ( this.getButtonState( 'thumbpad' ) === false || paintActive === false ) return;
 
 		var x = event.axes[ 0 ] / 2.0;
 		var y = - event.axes[ 1 ] / 2.0;
@@ -251,7 +258,7 @@ THREE.ViveController = function ( id ) {
 
 	}
 
-	function onGripsDown( event ) {
+	/*function onGripsDown( event ) {
 
 		if ( mode === MODES.COLOR ) {
 			mode = MODES.SIZE;
@@ -267,13 +274,24 @@ THREE.ViveController = function ( id ) {
 			return;
 		}
 
-	}
+	} */
 
 	this.getColor = function () { return color; };
 	this.getSize = function () { return size; };
 
 	this.addEventListener( 'axischanged', onAxisChanged );
-	this.addEventListener( 'gripsdown', onGripsDown );
+	//this.addEventListener( 'gripsdown', onGripsDown );
+
+	this.paintOn = function() {
+		paintActive = true;
+		colorUI.visible = true;
+	}
+
+
+	this.paintOff = function() {
+		paintActive = false;
+		colorUI.visible = false;
+	}
 };
 
 THREE.ViveController.prototype = Object.create( THREE.Object3D.prototype );
