@@ -22,16 +22,21 @@ var axisY;
 var trackpadTrackerInit = true;
 var tracker;
 
+//====================== for paint mode =======================================
 var vector1 = new THREE.Vector3();
 var vector2 = new THREE.Vector3();
 var vector3 = new THREE.Vector3();
 var vector4 = new THREE.Vector3();
 var up = new THREE.Vector3( 0, 1, 0 );
+
 var point4 = new THREE.Vector3();
 var point5 = new THREE.Vector3();
 
+var pivot;                                      //painting is created from this point
 var shapes = {};
 var paintLine;
+var toggleState = true;
+var paintState = true;
 
 
 init();
@@ -65,27 +70,37 @@ function init(){
         
         document.body.appendChild(WEBVR.createButton(renderer));    //WEBVR BUTTON
 
-        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
-        dollyCam = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 1000);
+        dollyCam = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 1000);
         dollyCam.add(camera);
         scene.add(dollyCam);
 
         clock = new THREE.Clock(); 
 
         var floorGeo = new THREE.PlaneBufferGeometry(200, 200, 20, 20);
-        var floorMat = new THREE.MeshStandardMaterial({color: 0xd6eaad});
+        var floorMat = new THREE.MeshStandardMaterial({
+            color: 0x222222,
+            roughness: 1.0,
+            metalness: 0.0
+        });
         var floor = new THREE.Mesh(floorGeo, floorMat);
         floor.position.set(0,0,0);
         floor.rotateX(-90* Math.PI/180);
         floor.receiveShadow = true;
         rayGroup.add(floor);
 
-        var ambi = new THREE.AmbientLight(0xffffff, 0.5);
-        scene.add(ambi);
-        var point = new THREE.PointLight(0xffffff, 0.5);
+
+        scene.add( new THREE.HemisphereLight( 0x888877, 0x777788 ) );
+        var point = new THREE.DirectionalLight(0xffffff);
+        point.castShadow = true;
+        point.shadow.camera.top = 2;
+        point.shadow.camera.bottom = -2;
+        point.shadow.camera.right = 2;
+        point.shadow.camera.left = -2;
+        point.shadow.mapSize.set( 4096, 4096 );
+        point.shadow.mapSize.set( 4096, 4096 );
         scene.add(point);
         point.position.set(0,10,0);
-        point.castShadow = true;
 
         var cubeGeo = new THREE.BoxBufferGeometry(2,2,2);
         var cubeMat = new THREE.MeshStandardMaterial({color: 0x00ff00});
@@ -106,18 +121,14 @@ function init(){
 
         viveController = new THREE.ViveController(0);
         viveController.standingMatrix = renderer.vr.getStandingMatrix();
+        viveController.userData.points = [ new THREE.Vector3(), new THREE.Vector3() ];
+		viveController.userData.matrices = [ new THREE.Matrix4(), new THREE.Matrix4() ];
         scene.add(viveController);
         loadController();
 
         createTutorial();
 
-        var pivot = new THREE.Mesh( new THREE.IcosahedronBufferGeometry( 0.01, 2 ) );
-        pivot.name = 'pivot';
-        pivot.position.y = -0.016;
-        pivot.position.z = -0.043;
-        pivot.rotation.x = Math.PI / 5.5;
-        viveController.add( pivot );
-        pivot.material = pivot.material.clone();
+        
 
     
     //====================== RayCaster ============================================
@@ -143,10 +154,10 @@ function init(){
 
 function render(){
 
-
+    viveController.update();
     renderer.setAnimationLoop(render);
     renderer.render(scene, camera);
-    viveController.update();
+    
     if(dragCube == true){
         cube.position.y += 0.05;
     }
@@ -160,8 +171,9 @@ function render(){
     };
 
     var count = paintLine.geometry.drawRange.count;
-    updateGeometry( count, paintLine.geometry.drawRange.count );
     handleController(viveController);
+    updateGeometry( count, paintLine.geometry.drawRange.count );
+    
 }
 
 //================================= Render End ================================================
@@ -182,8 +194,7 @@ function loadController() {
         });
         viveController.add(tutorialWindows);
 
-        viveController.userData.points = [ new THREE.Vector3(), new THREE.Vector3() ];
-		viveController.userData.matrices = [ new THREE.Matrix4(), new THREE.Matrix4() ];
+ 
     }
     
 viveController.addEventListener('triggerdown', onTriggerDown);
@@ -202,16 +213,16 @@ function onTriggerDown(){
             firstTimePressed = true;
         } 
 
-        /*if(menuStep === 1 && targetNo == 1){
-            openPaint();
-        } */
-        //stroke( viveController, point1, point2, matrix1, matrix2 );
+
 
     
 }
 
 function onTriggerUp(){
         dragCube = false;
+        if (paintState === false){
+            paintState = true;
+        }
  
     
 }
@@ -250,11 +261,13 @@ function onThumbpadDown(){
     }
     if( menuStep === 1 && targetNo === 1) {
         viveController.paintOn();
+        menuStep = 0;
+        menu();
     }
 
 }
 function onThumbpadUp(){
-
+    toggleState = true;
 }
 
 function onGripsDown(){
@@ -630,150 +643,179 @@ function menu(){
     }
 }
 
+
 //===================================================== Paint function ==============================================================
 
 
+    function initGeometry() {
+            pivot = new THREE.Mesh( new THREE.IcosahedronBufferGeometry( 0.01, 2 ) );           //Init for pivot
+            pivot.name = 'pivot';
+            pivot.position.y = -0.016;
+            pivot.position.z = -0.043;
+            pivot.rotation.x = Math.PI / 5.5;
+            viveController.add( pivot );
+            pivot.visible = false;
+            pivot.material = pivot.material.clone();
+        
 
-function initGeometry() {
-    var geometry = new THREE.BufferGeometry();
-    var positions = new THREE.BufferAttribute( new Float32Array( 1000000 * 3 ), 3 );
-    positions.dynamic = true;
-    geometry.addAttribute( 'position', positions );
-    var normals = new THREE.BufferAttribute( new Float32Array( 1000000 * 3 ), 3 );
-    normals.dynamic = true;
-    geometry.addAttribute( 'normal', normals );
-    var colors = new THREE.BufferAttribute( new Float32Array( 1000000 * 3 ), 3 );
-    colors.dynamic = true;
-    geometry.addAttribute( 'color', colors );
-    geometry.drawRange.count = 0;
-    //
-   
-    var material = new THREE.MeshStandardMaterial( {
-        roughness: 0.9,
-        metalness: 0.0,
-        // envMap: reflectionCube,
-        vertexColors: THREE.VertexColors,
-        side: THREE.DoubleSide
-    } );
-    paintLine = new THREE.Mesh( geometry, material );
-    paintLine.frustumCulled = false;
-    paintLine.castShadow = true;
-    paintLine.receiveShadow = true;
-    scene.add( paintLine );
-    // Shapes
-    shapes[ 'tube' ] = getTubeShapes( 1.0 );
-}
-function getTubeShapes( size ) {
-    var PI2 = Math.PI * 2;
-    var sides = 10;
-    var array = [];
-    var radius = 0.01 * size;
-    for( var i = 0; i < sides; i ++ ) {
-        var angle = ( i / sides ) * PI2;
-        array.push( new THREE.Vector3( Math.sin( angle ) * radius, Math.cos( angle ) * radius, 0 ) );
+            var geometry = new THREE.BufferGeometry();                                              
+            var positions = new THREE.BufferAttribute( new Float32Array( 1000000 * 3 ), 3 );    //geometry for painted line
+            positions.dynamic = true;
+            geometry.addAttribute( 'position', positions );
+            var normals = new THREE.BufferAttribute( new Float32Array( 1000000 * 3 ), 3 );
+            normals.dynamic = true;
+            geometry.addAttribute( 'normal', normals );
+            var colors = new THREE.BufferAttribute( new Float32Array( 1000000 * 3 ), 3 );
+            colors.dynamic = true;
+            geometry.addAttribute( 'color', colors );
+            geometry.drawRange.count = 0;
+            //
+        
+            var material = new THREE.MeshStandardMaterial( {
+                roughness: 0.9,
+                metalness: 0.0,
+                // envMap: reflectionCube,
+                vertexColors: THREE.VertexColors,
+                side: THREE.DoubleSide
+            } );
+            paintLine = new THREE.Mesh( geometry, material );
+            paintLine.frustumCulled = false;
+            paintLine.castShadow = true;
+            paintLine.receiveShadow = true;
+            scene.add( paintLine );
+            // Shapes
+            shapes[ 'tube' ] = getTubeShapes( 1.0 );                    //calles function for creating tube shape
     }
-    return array;
-}
 
-
-
-
-function stroke( controller, point1, point2, matrix1, matrix2 ) {
-    var color = controller.getColor();
-    var shapes = getTubeShapes( controller.getSize() );
-    var geometry = paintLine.geometry;
-    var attributes = geometry.attributes;
-    var count = geometry.drawRange.count;
-    var positions = attributes.position.array;
-    var normals = attributes.normal.array;
-    var colors = attributes.color.array;
-    for ( var j = 0, jl = shapes.length; j < jl; j ++ ) {
-        var vertex1 = shapes[ j ];
-        var vertex2 = shapes[ ( j + 1 ) % jl ];
-        // positions
-        vector1.copy( vertex1 );
-        vector1.applyMatrix4( matrix2 );
-        vector1.add( point2 );
-        vector2.copy( vertex2 );
-        vector2.applyMatrix4( matrix2 );
-        vector2.add( point2 );
-        vector3.copy( vertex2 );
-        vector3.applyMatrix4( matrix1 );
-        vector3.add( point1 );
-        vector4.copy( vertex1 );
-        vector4.applyMatrix4( matrix1 );
-        vector4.add( point1 );
-        vector1.toArray( positions, ( count + 0 ) * 3 );
-        vector2.toArray( positions, ( count + 1 ) * 3 );
-        vector4.toArray( positions, ( count + 2 ) * 3 );
-        vector2.toArray( positions, ( count + 3 ) * 3 );
-        vector3.toArray( positions, ( count + 4 ) * 3 );
-        vector4.toArray( positions, ( count + 5 ) * 3 );
-        // normals
-        vector1.copy( vertex1 );
-        vector1.applyMatrix4( matrix2 );
-        vector1.normalize();
-        vector2.copy( vertex2 );
-        vector2.applyMatrix4( matrix2 );
-        vector2.normalize();
-        vector3.copy( vertex2 );
-        vector3.applyMatrix4( matrix1 );
-        vector3.normalize();
-        vector4.copy( vertex1 );
-        vector4.applyMatrix4( matrix1 );
-        vector4.normalize();
-        vector1.toArray( normals, ( count + 0 ) * 3 );
-        vector2.toArray( normals, ( count + 1 ) * 3 );
-        vector4.toArray( normals, ( count + 2 ) * 3 );
-        vector2.toArray( normals, ( count + 3 ) * 3 );
-        vector3.toArray( normals, ( count + 4 ) * 3 );
-        vector4.toArray( normals, ( count + 5 ) * 3 );
-        // colors
-        color.toArray( colors, ( count + 0 ) * 3 );
-        color.toArray( colors, ( count + 1 ) * 3 );
-        color.toArray( colors, ( count + 2 ) * 3 );
-        color.toArray( colors, ( count + 3 ) * 3 );
-        color.toArray( colors, ( count + 4 ) * 3 );
-        color.toArray( colors, ( count + 5 ) * 3 );
-        count += 6;
-    }
-    geometry.drawRange.count = count;
-}
-
-function updateGeometry( start, end ) {
-    if ( start === end ) return;
-    var offset = start * 3;
-    var count = ( end - start ) * 3;
-    var geometry = paintLine.geometry;
-    var attributes = geometry.attributes;
-    attributes.position.updateRange.offset = offset;
-    attributes.position.updateRange.count = count;
-    attributes.position.needsUpdate = true;
-    attributes.normal.updateRange.offset = offset;
-    attributes.normal.updateRange.count = count;
-    attributes.normal.needsUpdate = true;
-    attributes.color.updateRange.offset = offset;
-    attributes.color.updateRange.count = count;
-    attributes.color.needsUpdate = true;
-}
-
-function handleController( controller ) {
-    var pivot = controller.getObjectByName( 'pivot' );
-    if ( pivot ) {
-        pivot.material.color.copy( controller.getColor() );
-        pivot.scale.setScalar(controller.getSize());
-        var matrix = pivot.matrixWorld;
-        var point1 = controller.userData.points[ 0 ];
-        var point2 = controller.userData.points[ 1 ];
-        var matrix1 = controller.userData.matrices[ 0 ];
-        var matrix2 = controller.userData.matrices[ 1 ];
-        point1.setFromMatrixPosition( matrix );
-        matrix1.lookAt( point2, point1, up );
-        if ( controller.getButtonState( 'trigger' ) ) {
-            stroke( controller, point1, point2, matrix1, matrix2 );
-            cube.position.y += 0.01;
+    function getTubeShapes( size ) {                                    //function for creating tube shape
+        var PI2 = Math.PI * 2;
+        var sides = 10;
+        var array = [];
+        var radius = 0.01 * size;
+        for( var i = 0; i < sides; i ++ ) {
+            var angle = ( i / sides ) * PI2;
+            array.push( new THREE.Vector3( Math.sin( angle ) * radius, Math.cos( angle ) * radius, 0 ) );
         }
-        point2.copy( point1 );
-        matrix2.copy( matrix1 );
+        return array;
     }
-}
+
+
+
+
+    function stroke( controller, point1, point2, matrix1, matrix2 ) {   //function to paint line in VR
+        var color = controller.getColor();
+        var shapes = getTubeShapes( controller.getSize() );
+        var geometry = paintLine.geometry;
+        var attributes = geometry.attributes;
+        var count = geometry.drawRange.count;
+        var positions = attributes.position.array;
+        var normals = attributes.normal.array;
+        var colors = attributes.color.array;
+        for ( var j = 0, jl = shapes.length; j < jl; j ++ ) {
+            var vertex1 = shapes[ j ];
+            var vertex2 = shapes[ ( j + 1 ) % jl ];
+            // positions
+            vector1.copy( vertex1 );
+            vector1.applyMatrix4( matrix2 );
+            vector1.add( point2 );
+            vector2.copy( vertex2 );
+            vector2.applyMatrix4( matrix2 );
+            vector2.add( point2 );
+            vector3.copy( vertex2 );
+            vector3.applyMatrix4( matrix1 );
+            vector3.add( point1 );
+            vector4.copy( vertex1 );
+            vector4.applyMatrix4( matrix1 );
+            vector4.add( point1 );
+            vector1.toArray( positions, ( count + 0 ) * 3 );
+            vector2.toArray( positions, ( count + 1 ) * 3 );
+            vector4.toArray( positions, ( count + 2 ) * 3 );
+            vector2.toArray( positions, ( count + 3 ) * 3 );
+            vector3.toArray( positions, ( count + 4 ) * 3 );
+            vector4.toArray( positions, ( count + 5 ) * 3 );
+            // normals
+            vector1.copy( vertex1 );
+            vector1.applyMatrix4( matrix2 );
+            vector1.normalize();
+            vector2.copy( vertex2 );
+            vector2.applyMatrix4( matrix2 );
+            vector2.normalize();
+            vector3.copy( vertex2 );
+            vector3.applyMatrix4( matrix1 );
+            vector3.normalize();
+            vector4.copy( vertex1 );
+            vector4.applyMatrix4( matrix1 );
+            vector4.normalize();
+            vector1.toArray( normals, ( count + 0 ) * 3 );
+            vector2.toArray( normals, ( count + 1 ) * 3 );
+            vector4.toArray( normals, ( count + 2 ) * 3 );
+            vector2.toArray( normals, ( count + 3 ) * 3 );
+            vector3.toArray( normals, ( count + 4 ) * 3 );
+            vector4.toArray( normals, ( count + 5 ) * 3 );
+            // colors
+            color.toArray( colors, ( count + 0 ) * 3 );
+            color.toArray( colors, ( count + 1 ) * 3 );
+            color.toArray( colors, ( count + 2 ) * 3 );
+            color.toArray( colors, ( count + 3 ) * 3 );
+            color.toArray( colors, ( count + 4 ) * 3 );
+            color.toArray( colors, ( count + 5 ) * 3 );
+            count += 6;
+        }
+        geometry.drawRange.count = count;
+    }
+
+    function updateGeometry( start, end ) {             //render function: updating painted geometry
+        if ( start === end ) return;
+        var offset = start * 3;
+        var count = ( end - start ) * 3;
+        var geometry = paintLine.geometry;
+        var attributes = geometry.attributes;
+        attributes.position.updateRange.offset = offset;
+        attributes.position.updateRange.count = count;
+        attributes.position.needsUpdate = true;
+        attributes.normal.updateRange.offset = offset;
+        attributes.normal.updateRange.count = count;
+        attributes.normal.needsUpdate = true;
+        attributes.color.updateRange.offset = offset;
+        attributes.color.updateRange.count = count;
+        attributes.color.needsUpdate = true;
+    }
+
+    function handleController( controller ) {           //render function: handle controller for paint mode
+        var pivot = controller.getObjectByName( 'pivot' );
+        if (paintActive === true){
+            pivot.visible = true;
+            if ( pivot ) {
+                pivot.material.color.copy( controller.getColor() );
+                pivot.scale.setScalar(controller.getSize());
+                var matrix = pivot.matrixWorld;
+                var point1 = controller.userData.points[ 0 ];
+                var point2 = controller.userData.points[ 1 ];
+                var matrix1 = controller.userData.matrices[ 0 ];
+                var matrix2 = controller.userData.matrices[ 1 ];
+                point1.setFromMatrixPosition( matrix );
+                matrix1.lookAt( point2, point1, up );
+                if ( controller.getButtonState( 'trigger' ) ) {
+                    if( controller.getColorUIState() === false && paintState === true){
+                    stroke( controller, point1, point2, matrix1, matrix2 );
+                    } if( controller.getColorUIState() === true){
+                        controller.toggleColorUI();
+                        paintState = false;
+                    }
+                }
+                if (controller.getButtonState('thumbpad')){
+                    if (toggleState === true){
+                        controller.toggleColorUI();
+                        toggleState = false;
+                    }
+                } 
+
+                point2.copy( point1 );
+                matrix2.copy( matrix1 );
+                
+            }
+        } else {
+            pivot.visible = false;
+            
+        }
+    }

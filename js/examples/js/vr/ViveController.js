@@ -136,11 +136,16 @@ THREE.ViveController = function ( id ) {
 	// COLOR UI
 
 	var geometry = new THREE.CircleGeometry( 1, 32 );
-	var material = new THREE.MeshBasicMaterial( { map: generateHueTexture() } );
+	var material = new THREE.MeshBasicMaterial( { 
+		map: generateHueTexture(),
+		side: THREE.DoubleSide,
+		transparent: true,
+		opacity: 0.8
+	 });
 	var colorUI = new THREE.Mesh( geometry, material );
-	colorUI.position.set( 0, 0.005, 0.0495 );
+	colorUI.position.set( 0, 0.02, - 0.1 );				//colorUI.position.set( 0, 0.005, 0.0495 );	
 	colorUI.rotation.x = - 1.45;
-	colorUI.scale.setScalar( 0.02 );
+	colorUI.scale.setScalar( 0.1 );
 	this.add( colorUI );
 	
 
@@ -217,27 +222,27 @@ THREE.ViveController = function ( id ) {
 	
 
 
-
+	var lastPos = new THREE.Vector3();
 	function onAxisChanged( event ) {
 
-		if ( this.getButtonState( 'thumbpad' ) === false || paintActive === false ) return;
+		if (  paintActive === false ) return;
 
+		sizeUI.visible = true;
 		var x = event.axes[ 0 ] / 2.0;
 		var y = - event.axes[ 1 ] / 2.0;
 
-		if ( mode === MODES.COLOR ) {
+		if (colorUI.visible === true && event.axes[0] !== 0 && event.axes[1] !== 0){
 			color.setHSL( Math.atan2( y, x ) / PI2, 1, ( 0.5 - Math.sqrt( x * x + y * y ) ) * 2.0 );
-
 			ball.position.set(event.axes[ 0 ], event.axes[ 1 ], 0);
 		}
+		
 
-		if ( mode === MODES.SIZE ) {
+		if ( colorUI.visible === false && event.axes[1] !== 0) {
+
 			var ratio = (0.5 - y);
 			size = ratio * 2;
-
 			resizeTriangleGeometry(sizeUIFill.geometry, ratio);
 		}
-
 	}
 
 	function resizeTriangleGeometry(geometry, ratio) {
@@ -276,15 +281,23 @@ THREE.ViveController = function ( id ) {
 
 	} */
 
+	this.getColorUIState = function() {return colorUI.visible; };
 	this.getColor = function () { return color; };
 	this.getSize = function () { return size; };
+	this.toggleColorUI = function () {
+		if (colorUI.visible === false){
+			colorUI.visible = true;
+		} else if (colorUI.visible === true){
+			colorUI.visible = false;
+		}
+	}
 
 	this.addEventListener( 'axischanged', onAxisChanged );
-	//this.addEventListener( 'gripsdown', onGripsDown );
+	this.addEventListener( 'gripsdown', onGripsDown );
 
 	this.paintOn = function() {
 		paintActive = true;
-		colorUI.visible = true;
+		//colorUI.visible = true;
 	}
 
 
