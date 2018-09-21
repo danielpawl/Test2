@@ -37,6 +37,7 @@ var shapes = {};
 var paintLine;
 var toggleState = true;
 var paintState = true;
+var lastPainted;
 
 
 init();
@@ -144,7 +145,8 @@ function init(){
     
     robo();
     createTracker();
-    initGeometry()
+    initGeometry();
+    initConfigurator();
 
 
 }
@@ -258,7 +260,11 @@ function onThumbpadDown(){
         targetNo = 0;
         menu();
         return;
-    }
+    } if( menuStep === 1 && targetNo === 0) {
+        viveController.paintOff();
+        menuStep = 2;
+        menu();
+    }    
     if( menuStep === 1 && targetNo === 1) {
         viveController.paintOn();
         menuStep = 0;
@@ -522,13 +528,13 @@ function createTutorial(){
     return;
 }
 
-//==================== Configurator ===================================================================
+//==================== Mode Menu ===================================================================
 
 function menu(){
     var target;
   
     
-    if (menuCreated ===false){
+    if (menuCreated === false){
         createMenu();                            //creates all objects for menu
     }
 
@@ -603,16 +609,18 @@ function menu(){
     function menuNavi(menuStep){
         switch(menuStep){
             case 0:
-                menuLevel[0].visible = false;
+                menuLevel[0].visible = false;   //mode menu
+                menuLevel[1].visible = false;   //configurator menu
                 break;
+
             case 1:
                 menuLevel[0].visible = true;
-
                     target(targetNo);
-
-  
                 break;
+
             case 2:
+                menuLevel[0].visible = false;
+                menuLevel[1].visible = true;
                 break;
         }
     }
@@ -642,7 +650,76 @@ function menu(){
         prevTarget = n;
     }
 }
+//===================================================== Configurator ===============================================================
+    function initConfigurator(){
 
+        viveController.add(menuLevel[1]);
+        
+        var loader = new THREE.TextureLoader(manager);
+        var Pos = new THREE.Vector3(-0.1 , 0.0 , -0.15);
+        var config = [];
+
+
+        menuLevel[1] = new THREE.Object3D();
+        var Mat = [];
+
+        var Geo = new THREE.PlaneBufferGeometry(0.03, 0.03);
+        Mat[0] = new THREE.MeshBasicMaterial({
+            map: loader.load('./images/symbols/mode_configurator.png'),
+            side: THREE.DoubleSide,
+            
+        });
+        
+        Mat[1] = new THREE.MeshBasicMaterial({
+            map: loader.load('./images/symbols/mode_paint.png'),
+            side: THREE.DoubleSide,
+        })
+
+      for (var i = 0; i <= 1; i++){
+            config[i] = new THREE.Mesh(Geo, Mat[i]);
+        } 
+        
+        FrameGeo = [];
+        for (var i = 0; i <= (config.length - 1); i++){
+            FrameGeo[i] = [0 , 1 , 2 , 3];
+
+            FrameGeo[i][0] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.003, 0.002, 0.037), new THREE.MeshBasicMaterial({color: 0xffffff}));   //right
+            FrameGeo[i][0].position.set((config[i].geometry.parameters.height/2.0) + FrameGeo[i][0].geometry.parameters.height , 0 , 0 );
+            FrameGeo[i][0].rotateX(-90 * Math.PI / 180);
+
+            FrameGeo[i][1] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.003, 0.002, 0.037), new THREE.MeshBasicMaterial({color: 0xffffff}));   //left
+            FrameGeo[i][1].position.set((-config[i].geometry.parameters.height/2.0) - FrameGeo[i][0].geometry.parameters.height , 0 , 0 );
+            FrameGeo[i][1].rotateX(-90 * Math.PI / 180);
+
+            FrameGeo[i][2] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.003, 0.002, 0.031), new THREE.MeshBasicMaterial({color: 0xffffff}));   //top
+            FrameGeo[i][2].position.set(0 , (config[i].geometry.parameters.height/2.0) + FrameGeo[i][0].geometry.parameters.height , 0 );
+            FrameGeo[i][2].rotateX(-90 * Math.PI / 180);
+            FrameGeo[i][2].rotateY(-90 * Math.PI / 180);
+
+            FrameGeo[i][3] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.003, 0.002, 0.031), new THREE.MeshBasicMaterial({color: 0xffffff}));   //bottom
+            FrameGeo[i][3].position.set(0 , (-config[i].geometry.parameters.height/2.0) - FrameGeo[i][0].geometry.parameters.height , 0 );
+            FrameGeo[i][3].rotateX(-90 * Math.PI / 180);
+            FrameGeo[i][3].rotateY(-90 * Math.PI / 180);
+            
+
+        } 
+        
+
+        for (var i = 0; i <= (config.length-1); i++){
+           for (var j = 0; j <= 3; j++){
+                config[i].add(FrameGeo[i][j])
+            } 
+            
+            config[i].position.set(Pos.x, Pos.y, Pos.z);
+            config[i].rotateX(-75* Math.PI / 180);
+            Pos.z +=  0.1;
+            menuLevel[1].add(config[i]);
+            //menuLevel[0].visible = false;
+            viveController.add(menuLevel[1]);
+        } 
+
+
+    }
 
 //===================================================== Paint function ==============================================================
 
@@ -804,7 +881,7 @@ function menu(){
                     }
                 }
                 if (controller.getButtonState('thumbpad')){
-                    if (toggleState === true){
+                    if (toggleState === true && menuStep === 0){
                         controller.toggleColorUI();
                         toggleState = false;
                     }
@@ -818,4 +895,56 @@ function menu(){
             pivot.visible = false;
             
         }
+    }
+
+    function undoPaint() {
+
+    }
+
+
+    function addSymbol(level , path){
+
+        var loader = new THREE.TextureLoader(manager);
+        var symbol;
+
+       
+        var geometry = new THREE.PlaneBufferGeometry(0.03, 0.03);
+        var material = new THREE.MeshBasicMaterial({
+            map: loader.load(path),
+            side: THREE.DoubleSide,
+        });
+
+
+        
+        var FrameGeo = [];
+    
+
+        FrameGeo[0] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.003, 0.002, 0.037), new THREE.MeshBasicMaterial({color: 0xffffff}));   //right
+        FrameGeo[0].position.set((config[i].geometry.parameters.height/2.0) + FrameGeo[i][0].geometry.parameters.height , 0 , 0 );
+        FrameGeo[0].rotateX(-90 * Math.PI / 180);
+
+        FrameGeo[1] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.003, 0.002, 0.037), new THREE.MeshBasicMaterial({color: 0xffffff}));   //left
+        FrameGeo[1].position.set((-config[i].geometry.parameters.height/2.0) - FrameGeo[i][0].geometry.parameters.height , 0 , 0 );
+        FrameGeo[1].rotateX(-90 * Math.PI / 180);
+
+        FrameGeo[2] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.003, 0.002, 0.031), new THREE.MeshBasicMaterial({color: 0xffffff}));   //top
+        FrameGeo[2].position.set(0 , (config[i].geometry.parameters.height/2.0) + FrameGeo[i][0].geometry.parameters.height , 0 );
+        FrameGeo[2].rotateX(-90 * Math.PI / 180);
+        FrameGeo[2].rotateY(-90 * Math.PI / 180);
+
+        FrameGeo[3] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.003, 0.002, 0.031), new THREE.MeshBasicMaterial({color: 0xffffff}));   //bottom
+        FrameGeo[3].position.set(0 , (-config[i].geometry.parameters.height/2.0) - FrameGeo[i][0].geometry.parameters.height , 0 );
+        FrameGeo[3].rotateX(-90 * Math.PI / 180);
+        FrameGeo[3].rotateY(-90 * Math.PI / 180);
+            
+
+        
+
+        for (var i = 0; i <= 3; i++){
+                symbol.add(FrameGeo[i])
+            } 
+            symbol.rotateX(-75* Math.PI / 180);
+            menuLevel[level].add(symbol);
+            
+         
     }
