@@ -1,0 +1,61 @@
+/* var loader = new THREE.TextureLoader(manager);
+        var modePos = new THREE.Vector3(-0.05 , 0.0 , -0.15);
+
+        //======================== Modes =====================
+        menuLevel[0] = new THREE.Object3D();
+        var modeMat = [];
+
+        modeGeo = new THREE.PlaneBufferGeometry(0.05, 0.05);
+        modeMat[0] = new THREE.MeshBasicMaterial({
+            map: loader.load('./images/symbols/mode_configurator.png'),
+            side: THREE.DoubleSide,
+            
+        });
+        
+        modeMat[1] = new THREE.MeshBasicMaterial({
+            map: loader.load('./images/symbols/mode_paint.png'),
+            side: THREE.DoubleSide,
+        })
+
+      for (var i = 0; i <= 1; i++){
+            mode[i] = new THREE.Mesh(modeGeo, modeMat[i]);
+        } 
+        
+        modeFrameGeo = [];
+        for (var i = 0; i <= (mode.length - 1); i++){
+            modeFrameGeo[i] = [0 , 1 , 2 , 3];
+
+            modeFrameGeo[i][0] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.005, 0.003, 0.061), new THREE.MeshBasicMaterial({color: 0xffffff}));   //right
+            modeFrameGeo[i][0].position.set((mode[i].geometry.parameters.height/2.0) + modeFrameGeo[i][0].geometry.parameters.height , 0 , 0 );
+            modeFrameGeo[i][0].rotateX(-90 * Math.PI / 180);
+
+            modeFrameGeo[i][1] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.005, 0.003, 0.061), new THREE.MeshBasicMaterial({color: 0xffffff}));   //left
+            modeFrameGeo[i][1].position.set((-mode[i].geometry.parameters.height/2.0) - modeFrameGeo[i][0].geometry.parameters.height , 0 , 0 );
+            modeFrameGeo[i][1].rotateX(-90 * Math.PI / 180);
+
+            modeFrameGeo[i][2] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.005, 0.003, 0.051), new THREE.MeshBasicMaterial({color: 0xffffff}));   //top
+            modeFrameGeo[i][2].position.set(0 , (mode[i].geometry.parameters.height/2.0) + modeFrameGeo[i][0].geometry.parameters.height , 0 );
+            modeFrameGeo[i][2].rotateX(-90 * Math.PI / 180);
+            modeFrameGeo[i][2].rotateY(-90 * Math.PI / 180);
+
+            modeFrameGeo[i][3] = new THREE.Mesh(new THREE.BoxBufferGeometry(.005, 0.003, 0.051), new THREE.MeshBasicMaterial({color: 0xffffff}));   //bottom
+            modeFrameGeo[i][3].position.set(0 , (-mode[i].geometry.parameters.height/2.0) - modeFrameGeo[i][0].geometry.parameters.height , 0 );
+            modeFrameGeo[i][3].rotateX(-90 * Math.PI / 180);
+            modeFrameGeo[i][3].rotateY(-90 * Math.PI / 180);
+            
+
+        } 
+        
+
+        for (var i = 0; i <= (mode.length-1); i++){
+           for (var j = 0; j <= 3; j++){
+                mode[i].add(modeFrameGeo[i][j])
+            } 
+            
+            mode[i].position.set(modePos.x, modePos.y, modePos.z);
+            mode[i].rotateX(-75* Math.PI / 180);
+            modePos.x +=  0.1;
+            menuLevel[0].add(mode[i]);
+            //menuLevel[0].visible = false;
+            viveController.add(menuLevel[0]);
+        } */
