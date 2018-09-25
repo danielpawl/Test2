@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<head>
+	<style>
+		html, body {
+			width: 100%;
+			height: 100%;
+		}
+
+		body {
+			background-color: #ffffff;
+			margin: 0;
+			overflow: hidden;
+			font-family: arial;
+		}
+
+		#blocker {
+
+			position: absolute;
+
+			width: 100%;
+			height: 100%;
+
+			background-color: rgba(0,0,0,0.5);
+
+		}
+
+		#instructions {
+
+			width: 100%;
+			height: 100%;
+
+			display: -webkit-box;
+			display: -moz-box;
+			display: box;
+
+			-webkit-box-orient: horizontal;
+			-moz-box-orient: horizontal;
+			box-orient: horizontal;
+
+			-webkit-box-pack: center;
+			-moz-box-pack: center;
+			box-pack: center;
+
+			-webkit-box-align: center;
+			-moz-box-align: center;
+			box-align: center;
+
+			color: #ffffff;
+			text-align: center;
+
+			cursor: pointer;
+
+		}
+
+	</style>
+</head>
+<html>
+	<script src="js/build/three.js"></script>
+	<script  src="js/libs/physi.js"></script>
+	<script src="js\examples\js\controls\OrbitControls.js" ></script>
+	<script src="js\examples\js\controls\PointerLockControls.js" ></script>
+	<script src="js\src\loaders\TextureLoader.js" ></script>
+	<script src="js\examples\js\loaders\ColladaLoader.js" ></script>
+	<script src="js\examples\js\loaders\GLTFLoader.js"></script>
+	<script src="js\examples\js\loaders\OBJLoader.js"></script>
+
+	<div id="blocker">
+
+				<div id="instructions">
+					<span style="font-size:40px">Click to play</span>
+					<br />
+					(W, A, S, D = Move, SPACE = Jump, MOUSE = Look around)
+				</div>
+	
+		</div>
+	<script>
+	
+	
+	
+	var scene, camera, renderer, controls, flashsource; 
+	var player = {height: 1, speed: 1, arrowspeed: 0.01};
+	var scene, render, renderer, dollyCam, camera, viveController, clock, cube;
+	var tutorialWindows = new THREE.Object3D();
+	var dragCube = false;
+	var firstTimePressed = false;
+	var tempMatrix = new THREE.Matrix4();
+	var intersected = [];
+	var rayGeo, raycaster;
+	var rayGroup = new THREE.Group();
+	var robo;
+	var manager;
+	var menuStep = 0;
+	var prevMenuStep = 0;
+	var mode = [];
+	var menuLevel = [];
+	var menuCreated = false;
+	var targetNext;
+	var targetNo = 0;
+	var prevTarget = 0;
+	var axisX;
+	var axisY;
+	var trackpadTrackerInit = true;
+	var tracker;
+	var ding;
+	
+	//keyboard
+	var keyboard= {};
+	var moveForward = false;
+	var moveBackward = false;
+	var moveLeft = false;
+	var moveRight = false;
+	var canJump = false;
+	var flashOn = false;
+
+	var prevTime = performance.now();
+	var velocity = new THREE.Vector3();
+	var direction = new THREE.Vector3();
+	var vertex = new THREE.Vector3();
+	var color = new THREE.Color();
+
+	
+	//needed for Pointerlock API
+	var blocker = document.getElementById( 'blocker' );
+	var instructions = document.getElementById( 'instructions' );
+	// http://www.html5rocks.com/en/tutorials/pointerlock/intro/
+	var havePointerLock = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
+	if ( havePointerLock ) {
+		var element = document.body;
+		var pointerlockchange = function ( event ) {
+			if ( document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element ) {
+				controlsEnabled = true;
+				controls.enabled = true;
+				blocker.style.display = 'none';
+			} else {
+				controls.enabled = false;
+				blocker.style.display = 'block';
+				instructions.style.display = '';
+			}
+		};
+		var pointerlockerror = function ( event ) {
+			instructions.style.display = '';
+		};
+		// Hook pointer lock state change events
+		document.addEventListener( 'pointerlockchange', pointerlockchange, false );
+		document.addEventListener( 'mozpointerlockchange', pointerlockchange, false );
+		document.addEventListener( 'webkitpointerlockchange', pointerlockchange, false );
+		document.addEventListener( 'pointerlockerror', pointerlockerror, false );
+		document.addEventListener( 'mozpointerlockerror', pointerlockerror, false );
+		document.addEventListener( 'webkitpointerlockerror', pointerlockerror, false );
+		instructions.addEventListener( 'click', function ( event ) {
+			instructions.style.display = 'none';
+			// Ask the browser to lock the pointer
+			element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
+			element.requestPointerLock();
+		}, false );
+	} else {
+		instructions.innerHTML = 'Your browser doesn\'t seem to support Pointer Lock API';
+	}
+	var controlsEnabled = false;
+
+
+	//Funktionen
+
+	init();
+	initConfigurator();
+	menu();
+
+	//Init
+	function init() {
+		scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000); //0xd8d3cb
+
+        renderer = new THREE.WebGLRenderer({antialias:true});
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        document.body.appendChild(renderer.domElement);
+		
+		camera = new THREE.PerspectiveCamera(30, window.innerWidth/ window.innerHeight, 0.01, 2500);
+		
+		
+		controls = new THREE.PointerLockControls(camera);
+		controls.getObject().position.set(0, 0, 0);
+		scene.add( controls.getObject() );
+
+        clock = new THREE.Clock(); 
+
+        var floorGeo = new THREE.PlaneBufferGeometry(200, 200, 20, 20);
+        var floorMat = new THREE.MeshStandardMaterial({
+            color: 0x222222,
+            roughness: 1.0,
+            metalness: 0.0
+        });
+        var floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.position.set(0,0,0);
+        floor.rotateX(-90* Math.PI/180);
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+
+        scene.add( new THREE.HemisphereLight( 0x888877, 0x777788 ) );
+        var point = new THREE.DirectionalLight(0xffffff);
+        point.castShadow = true;
+        point.shadow.camera.top = 2;
+        point.shadow.camera.bottom = -2;
+        point.shadow.camera.right = 2;
+        point.shadow.camera.left = -2;
+        point.shadow.mapSize.set( 4096, 4096 );
+        point.shadow.mapSize.set( 4096, 4096 );
+        scene.add(point);
+        point.position.set(0,10,0);
+
+        var cubeGeo = new THREE.BoxBufferGeometry(2,2,2);
+        var cubeMat = new THREE.MeshStandardMaterial({color: 0x00ff00});
+        cube = new THREE.Mesh(cubeGeo, cubeMat);
+        cube.position.set(camera.position.x, camera.position.y, camera.position.z -5);
+        cube.castShadow = true;
+        cube.receiveShadow = true;
+        
+		scene.add(cube);
+		
+		var geometry = new THREE.CylinderBufferGeometry(0.01, 0.01 , 0.1 , 32);
+		var material = new THREE.MeshPhongMaterial({color: 0xffccdd});
+
+		ding = new THREE.Mesh(geometry, material);
+		camera.add(ding);
+		ding.position.set(0, -0.1 , -1);
+		ding.rotateX(135* Math.PI /180);
+
+
+		render();
+	
+	}
+
+	function onWindowResize() {
+		camera.aspect = window.innerWidth / window.innerHeight;
+		camera.updateProjectionMatrix();
+		renderer.setSize( window.innerWidth, window.innerHeight );
+	}
+
+	//Animete loop
+		function render() {
+			requestAnimationFrame( render );
+			renderer.render( scene, camera );
+				
+			//Control
+			if(controlsEnabled){
+				
+			
+				var time = performance.now();
+				var delta = ( time - prevTime ) / 1000;
+				velocity.x -= velocity.x * 10.0 * delta;
+				velocity.z -= velocity.z * 10.0 * delta;
+				velocity.y -= 9.8 * 50.0 * delta; // 100.0 = mass
+				direction.z = Number( moveForward ) - Number( moveBackward );
+				direction.x = Number( moveLeft ) - Number( moveRight );
+				direction.normalize(); // this ensures consistent movements in all directions
+				if ( moveForward || moveBackward ) velocity.z -= direction.z * 400.0 * delta;
+				if ( moveLeft || moveRight ) velocity.x -= direction.x * 400.0 * delta;
+
+				
+				controls.getObject().translateX( 2*velocity.x * delta );
+				controls.getObject().translateY( velocity.y * delta  );
+				controls.getObject().translateZ( 2*velocity.z * delta );
+				if ( controls.getObject().position.y < player.height ) {
+					velocity.y = 0;
+					controls.getObject().position.y = player.height;
+					canJump = true;
+				}
+				prevTime = time;				
+			}	
+		}
+	
+
+	//Key Actions
+	function keyDown(event){
+		switch ( event.keyCode ) {
+					case 38: // up
+					case 87: // w
+						moveForward = true;
+						break;
+					case 37: // left
+					case 65: // a
+						moveLeft = true;
+						break; 
+					case 40: // down
+					case 83: // s
+						moveBackward = true;
+						break;
+					case 39: // right
+					case 68: // d
+						moveRight = true;
+						break;
+					case 32: // space
+						if ( canJump === true ) velocity.y += 150;
+						canJump = false;
+						break;
+					case 70: // f flashlight
+						if(menuStep === 0){
+							if (prevMenuStep >= 1){
+								menuStep = prevMenuStep;
+								menu();
+							} else {
+							menuStep = 1;
+							menu();
+							}
+							return;
+						} if (menuStep !== 0){
+							prevMenuStep = menuStep;
+							menuStep = 0;
+							menu();
+
+						}
+						break;
+						
+					case 80: //p
+						break;			
+		}
+	}
+
+	function keyUp(event){
+		switch( event.keyCode ) {
+					case 38: // up
+					case 87: // w
+						moveForward = false;
+						if(moveBackward == true || moveLeft == true || moveRight == true) {
+							break
+						}
+					case 37: // left
+					case 65: // a
+						moveLeft = false;
+						if(moveBackward == true || moveForward == true || moveRight == true) {
+							break
+						}
+					case 40: // down
+					case 83: // s
+						moveBackward = false;
+						if(moveForward == true || moveLeft == true || moveRight == true) {
+							break
+						}
+					case 39: // right
+					case 68: // d
+						moveRight = false;
+						if(moveBackward == true || moveLeft == true || moveForward == true) {
+							break
+						}
+		}
+	}
+
+	window.addEventListener('keydown', keyDown, false);
+	window.addEventListener('keyup', keyUp, false);
+	
+	function menu(){
+    var target;
+  
+    
+    if (menuCreated === false){
+        createMenu();                            //creates all objects for menu
+    }
+
+    function createMenu(){                  //function for creating objects for menu
+        var loader = new THREE.TextureLoader(manager);
+        var modePos = new THREE.Vector3(-0.05 , 0.0 , -0.15);
+
+        //======================== Modes =====================
+        menuLevel[0] = new THREE.Object3D();
+        var modeMat = [];
+
+        modeGeo = new THREE.PlaneBufferGeometry(0.05, 0.05);
+        modeMat[0] = new THREE.MeshBasicMaterial({
+            map: loader.load('./images/symbols/mode_configurator.png'),
+            side: THREE.DoubleSide,
+            
+        });
+        
+        modeMat[1] = new THREE.MeshBasicMaterial({
+            map: loader.load('./images/symbols/mode_paint.png'),
+            side: THREE.DoubleSide,
+        })
+
+      for (var i = 0; i <= 1; i++){
+            mode[i] = new THREE.Mesh(modeGeo, modeMat[i]);
+        } 
+        
+        modeFrameGeo = [];
+        for (var i = 0; i <= (mode.length - 1); i++){
+            modeFrameGeo[i] = [0 , 1 , 2 , 3];
+
+            modeFrameGeo[i][0] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.005, 0.003, 0.061), new THREE.MeshBasicMaterial({color: 0xffffff}));   //right
+            modeFrameGeo[i][0].position.set((mode[i].geometry.parameters.height/2.0) + modeFrameGeo[i][0].geometry.parameters.height , 0 , 0 );
+            modeFrameGeo[i][0].rotateX(-90 * Math.PI / 180);
+
+            modeFrameGeo[i][1] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.005, 0.003, 0.061), new THREE.MeshBasicMaterial({color: 0xffffff}));   //left
+            modeFrameGeo[i][1].position.set((-mode[i].geometry.parameters.height/2.0) - modeFrameGeo[i][0].geometry.parameters.height , 0 , 0 );
+            modeFrameGeo[i][1].rotateX(-90 * Math.PI / 180);
+
+            modeFrameGeo[i][2] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.005, 0.003, 0.051), new THREE.MeshBasicMaterial({color: 0xffffff}));   //top
+            modeFrameGeo[i][2].position.set(0 , (mode[i].geometry.parameters.height/2.0) + modeFrameGeo[i][0].geometry.parameters.height , 0 );
+            modeFrameGeo[i][2].rotateX(-90 * Math.PI / 180);
+            modeFrameGeo[i][2].rotateY(-90 * Math.PI / 180);
+
+            modeFrameGeo[i][3] = new THREE.Mesh(new THREE.BoxBufferGeometry(.005, 0.003, 0.051), new THREE.MeshBasicMaterial({color: 0xffffff}));   //bottom
+            modeFrameGeo[i][3].position.set(0 , (-mode[i].geometry.parameters.height/2.0) - modeFrameGeo[i][0].geometry.parameters.height , 0 );
+            modeFrameGeo[i][3].rotateX(-90 * Math.PI / 180);
+            modeFrameGeo[i][3].rotateY(-90 * Math.PI / 180);
+            
+
+        } 
+        
+
+        for (var i = 0; i <= (mode.length-1); i++){
+           for (var j = 0; j <= 3; j++){
+                mode[i].add(modeFrameGeo[i][j])
+            } 
+            
+            mode[i].position.set(modePos.x, modePos.y, modePos.z);
+            mode[i].rotateX(-75* Math.PI / 180);
+            modePos.x +=  0.1;
+            menuLevel[0].add(mode[i]);
+            //menuLevel[0].visible = false;
+            ding.add(menuLevel[0]);
+        } 
+
+        menuCreated = true;
+    } 
+    
+    return menuNavi(menuStep);
+
+    function menuNavi(menuStep){
+        switch(menuStep){
+            case 0:
+                menuLevel[0].visible = false;   //mode menu
+                menuLevel[1].visible = false;   //configurator menu
+                break;
+
+            case 1:
+                menuLevel[0].visible = true;
+                    target(targetNo);
+                break;
+
+            case 2:
+                menuLevel[0].visible = false;
+                menuLevel[1].visible = true;
+                break;
+        }
+    }
+
+    function target(n){
+        if (prevTarget == n){
+            mode[n].traverse( function ( node ) {
+                if ( node instanceof THREE.Mesh){
+                    node.material.color.setHex(0x00ff00);
+                } 
+            });
+           // mode[n].scale.set(1.5 , 1.5, 1.5);
+        } else {
+            mode[prevTarget].traverse( function ( node ) {
+                if ( node instanceof THREE.Mesh){
+                    node.material.color.setHex(0xffffff);
+                   // node.scale.set(1, 1, 1);
+                } 
+            });
+        }
+        mode[n].traverse( function ( node ) {
+            if ( node instanceof THREE.Mesh){
+                node.material.color.setHex(0x00ff00);
+                //node.scale.set(1.5, 1.5, 1.5);
+            } 
+        });
+        prevTarget = n;
+    }
+}
+//===================================================== Configurator ===============================================================
+    function initConfigurator(){
+
+        ding.add(menuLevel[1]);
+        
+        var loader = new THREE.TextureLoader(manager);
+        var Pos = new THREE.Vector3(-0.1 , 0.0 , -0.15);
+        var config = [];
+
+
+        menuLevel[1] = new THREE.Object3D();
+        var Mat = [];
+
+        var Geo = new THREE.PlaneBufferGeometry(0.03, 0.03);
+        Mat[0] = new THREE.MeshBasicMaterial({
+            map: loader.load('./images/symbols/mode_configurator.png'),
+            side: THREE.DoubleSide,
+            
+        });
+        
+        Mat[1] = new THREE.MeshBasicMaterial({
+            map: loader.load('./images/symbols/mode_paint.png'),
+            side: THREE.DoubleSide,
+        })
+
+      for (var i = 0; i <= 1; i++){
+            config[i] = new THREE.Mesh(Geo, Mat[i]);
+        } 
+        
+        FrameGeo = [];
+        for (var i = 0; i <= (config.length - 1); i++){
+            FrameGeo[i] = [0 , 1 , 2 , 3];
+
+            FrameGeo[i][0] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.003, 0.002, 0.037), new THREE.MeshBasicMaterial({color: 0xffffff}));   //right
+            FrameGeo[i][0].position.set((config[i].geometry.parameters.height/2.0) + FrameGeo[i][0].geometry.parameters.height , 0 , 0 );
+            FrameGeo[i][0].rotateX(-90 * Math.PI / 180);
+
+            FrameGeo[i][1] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.003, 0.002, 0.037), new THREE.MeshBasicMaterial({color: 0xffffff}));   //left
+            FrameGeo[i][1].position.set((-config[i].geometry.parameters.height/2.0) - FrameGeo[i][0].geometry.parameters.height , 0 , 0 );
+            FrameGeo[i][1].rotateX(-90 * Math.PI / 180);
+
+            FrameGeo[i][2] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.003, 0.002, 0.031), new THREE.MeshBasicMaterial({color: 0xffffff}));   //top
+            FrameGeo[i][2].position.set(0 , (config[i].geometry.parameters.height/2.0) + FrameGeo[i][0].geometry.parameters.height , 0 );
+            FrameGeo[i][2].rotateX(-90 * Math.PI / 180);
+            FrameGeo[i][2].rotateY(-90 * Math.PI / 180);
+
+            FrameGeo[i][3] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.003, 0.002, 0.031), new THREE.MeshBasicMaterial({color: 0xffffff}));   //bottom
+            FrameGeo[i][3].position.set(0 , (-config[i].geometry.parameters.height/2.0) - FrameGeo[i][0].geometry.parameters.height , 0 );
+            FrameGeo[i][3].rotateX(-90 * Math.PI / 180);
+            FrameGeo[i][3].rotateY(-90 * Math.PI / 180);
+            
+
+        } 
+        
+
+        for (var i = 0; i <= (config.length-1); i++){
+           for (var j = 0; j <= 3; j++){
+                config[i].add(FrameGeo[i][j])
+            } 
+            
+            config[i].position.set(Pos.x, Pos.y, Pos.z);
+            config[i].rotateX(-75* Math.PI / 180);
+            Pos.z +=  0.1;
+            menuLevel[1].add(config[i]);
+            //menuLevel[0].visible = false;
+            ding.add(menuLevel[1]);
+        } 
+
+
+    }
+
+			
+	
+	</script>
+
+
+
+	
+	<div id="viewport"></div>
+
+
+</html>

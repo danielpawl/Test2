@@ -902,21 +902,36 @@ function menu(){
     }
 
 
-    function addSymbol(level , path){
+    function addSymbol(width, height, depth, frame, level, path){
 
         var loader = new THREE.TextureLoader(manager);
         var symbol;
+        var extrudeSettings = { amount: 1, bevelEnabled: false, depth: 0.2 };
 
        
-        var geometry = new THREE.PlaneBufferGeometry(0.03, 0.03);
+        var geometry = new THREE.PlaneBufferGeometry(width - (2 * frame), height - (2* frame));
         var material = new THREE.MeshBasicMaterial({
             map: loader.load(path),
             side: THREE.DoubleSide,
         });
 
-
+        symbol = new THREE.Mesh(geometry, material);
         
-        var FrameGeo = [];
+
+
+        var shape = new THREE.Shape();
+        shape.moveTo(0 , 0);
+        shape.lineTo(0, height);
+        shape.lineTo(width,height);
+        shape.lineTo(width, 0);
+
+        var hole = new THREE.Path();
+        hole.moveTo(frame, frame);
+        hole.lineTo(frame, height - frame);
+        hole.lineTo(width - frame, height - frame);
+        hole.lineTo(width - frame, frame);
+
+        shape.holes.push(hole);
     
 
         FrameGeo[0] = new THREE.Mesh(new THREE.BoxBufferGeometry(0.003, 0.002, 0.037), new THREE.MeshBasicMaterial({color: 0xffffff}));   //right
