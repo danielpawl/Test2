@@ -7,10 +7,16 @@ var tempMatrix = new THREE.Matrix4();
 var intersected = [];
 var rayGeo, raycaster;
 var rayGroup = new THREE.Group();
-var robo;
+var robo = [];
+var roboCounter = 0;
 var manager;
+
+
 var menuStep = 0;
 var prevMenuStep = 0;
+var text;
+var tooltip = new THREE.Object3D();
+var tooltip2 = new THREE.Object3D();
 var symbol = [];
 var symbolCounter = 0;
 var menuLevel = [];
@@ -18,6 +24,8 @@ var menuCreated = false;
 var targetNext;
 var targetNo = 0;
 var prevTarget = 0;
+
+
 var axisX;
 var axisY;
 var trackpadTrackerInit = true;
@@ -91,7 +99,7 @@ function init(){
         floor.receiveShadow = true;
         rayGroup.add(floor);
 
-
+      
         scene.add( new THREE.HemisphereLight( 0x888877, 0x777788 ) );
         var point = new THREE.DirectionalLight(0xffffff);
         point.castShadow = true;
@@ -144,7 +152,7 @@ function init(){
 
     //===================== Functions ================================================
     
-    robo();
+    initRobo();
     createTracker();
     initGeometry();
     initMenu();
@@ -170,7 +178,9 @@ function render(){
     cleanIntersected();
     intersectObjects(viveController);
     if(clock.getElapsedTime() >= 2){
-        robo.rotation.z += 0.01;
+        robo[0].rotation.z += 0.01;
+        robo[1].rotation.z += 0.01;
+        robo[2].rotation.z += 0.01;
     };
 
     var count = paintLine.geometry.drawRange.count;
@@ -193,6 +203,7 @@ function loadController() {
             var controller = object.children[0];
             controller.material.map = loader.load('onepointfive_texture.png');
             controller.material.specularMap = loader.load('onepointfive_spec.png');
+            controller.castShadow = true;
             viveController.add(object.clone());
         });
         viveController.add(tutorialWindows);
@@ -216,6 +227,16 @@ function onTriggerDown(){
             firstTimePressed = true;
         } 
 
+        if (robo[0].visible === true){
+            robo[0].visible = false;
+            robo[1].visible = true;
+        } else if(robo[1].visible === true){
+            robo[1].visible = false;
+            robo[2].visible = true;
+        } else if(robo[2].visible === true){
+            robo[2].visible = false;
+            robo[0].visible = true;
+        }
 
 
     
@@ -242,21 +263,22 @@ function axisChanged(a){
 }
 
 function onThumbpadDown(){
-    //robo.visible = true;
+    var border = 0.3
+
     switch(menuStep){
         case 1:
-            if ( axisX <= -0.5 && targetNo !== 0){ 
+            if ( axisX <= -border && targetNo !== 0){ 
                 targetNo -= 1; 
                 menu();
                 return;
             } 
-            if ( axisX >= 0.5 && targetNo !== 1){
+            if ( axisX >= border && targetNo !== 1){
                 targetNo += 1; 
                 menu();
                 return;
             }
             
-            if ( axisX <= 0.5 && axisX >= -0.5 && axisY <= 0.5 && axisY >= -0.5){
+            if ( axisX <= border && axisX >= -border && axisY <= border && axisY >= -border){
 
                 if( targetNo === 0) {
                     viveController.paintOff();
@@ -274,15 +296,23 @@ function onThumbpadDown(){
             }
             break;
         case 2:
-            if (axisY <= -0.5 && targetNo >= 3){
+            if (axisY <= -border && targetNo >= 3){
                 targetNo -= 1;
                 menu();
                 return;
-            } if( axisY >= 0.5 && targetNo <= 4){
+            } if( axisY >= border && targetNo <= 4){
                 targetNo += 1;
                 menu();
                 return;
-            } break;
+            } 
+            if ( axisX <= border && axisX >= -border && axisY <= border && axisY >= -border){
+
+                if( targetNo === 2) {
+                    robo[0].visible = true;
+                    return;
+                }
+            }    
+            break;
     } 
 
 }
@@ -294,6 +324,8 @@ function onThumbpadUp(){
 function onGripsDown(){
     if (menuStep !== 0){
         menuStep -= 1;
+        if(menuStep === 0){targetNo = 0};
+        if(menuStep === 1){targetNo = 0};
         menu();
     }
   
@@ -390,42 +422,57 @@ function cleanIntersected() {
 }
 
 //==============================Robo=================================================================
-function robo(){
-    var colladaLoader = new THREE.ColladaLoader(manager);
-    var textureLoader = new THREE.TextureLoader(manager);
-    var dae;
-    var oldMat = new THREE.MeshBasicMaterial() ;
-    colladaLoader.load('models/dae/robo/kuka-kr5-r650.dae', function(collada){
-        dae = collada.scene;
-        dae.traverse( function ( node ) {
-            if ( node instanceof THREE.Mesh){
-                oldMat.color = node.material.color
-                node.material = oldMat;
-                node.castShadow = true;
-                node.flatShading = true;
-            } 
-        }); 
+function initRobo(){
+    loadRobo('kuka kr5 r650', 'models/dae/robo/kuka-kr5-r650.dae');
+    loadRobo('kuka kr5 r850','models/dae/robo/kuka-kr5-r850.dae');
+    loadRobo('UR5','models/dae/robo/UR5.dae')
+    function loadRobo(name, path){
+        var colladaLoader = new THREE.ColladaLoader(manager);
+        var textureLoader = new THREE.TextureLoader(manager);
+        var dae;
+        var oldMat = new THREE.MeshPhongMaterial() ;
+        colladaLoader.load(path, function(collada){
+            dae = collada.scene;
+            dae.traverse( function ( node ) {
+                if ( node instanceof THREE.Mesh){
+                    //oldMat.color = node.material.color
+                    //node.material = oldMat;
+                    node.castShadow = true;
+                    node.material.flatShading = true;
+                    
+                } 
+            }); 
 
 
-        dae.scale.set(0.15 , 0.15, 0.15);
-        scene.add(dae);
-        viveController.add(dae);
-        dae.position.set(0, -0.015, -0.045);
-        dae.rotateX(-60* Math.PI/180);
-        robo = dae;
-        robo.visible = false;
+            
+            scene.add(dae);
+            viveController.add(dae);
+            dae.scale.set(0.15 , 0.15, 0.15);
+            
+            dae.position.set(0, -0.015, -0.045);
+            dae.rotateX(-60* Math.PI/180);
+            robo[roboCounter] = dae;
+            robo[roboCounter].visible = false;
+            robo[roboCounter].name = name;
+            roboCounter++;
 
-    },
-    function ( xhr ) {
-    console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
-    },
 
-    function ( error ) {
-    console.log( 'An error happened' )
-    })
-    
+
+        },
+        function ( xhr ) {
+        console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+        },
+
+        function ( error ) {
+        console.log( 'An error happened' )
+        })
+    }
+     
 } 
 
+function roboMenu(){
+
+}
 //========================== Window for buttons ==========================================================
 
 function createTutorial(){
@@ -552,17 +599,27 @@ function menu(){
         case 0:
             menuLevel[0].visible = false;   //mode menu
             menuLevel[1].visible = false;   //configurator menu
+            tooltip.visible = false;
+            tooltip2.visible = false;
             break;
 
         case 1:
             menuLevel[0].visible = true;
-                target(targetNo);
+            menuLevel[1].visible = false;
+            if('undefined' !== typeof text){
+                tooltip.visible = true;
+                tooltip2.visible = false;
+            }
+            target(targetNo);
                 
             break;
 
         case 2:
             menuLevel[0].visible = false;
             menuLevel[1].visible = true;
+            tooltip.visible = true;
+            tooltip2.visible = true;
+            robo[0].visible = true;
 
             target(targetNo);
             break;      
@@ -574,37 +631,48 @@ function menu(){
 
     function target(n){
         if (prevTarget == n){
-            symbol[n].traverse( function ( node ) {
-                if ( node instanceof THREE.Mesh){
-                    node.material.color.setHex(0x00ffc2);
-                } 
-            });
-            symbol[n].scale.set(1.2 , 1.2, 1.2);
+        
+            symbol[n].children[0].material.color.setHex(0x00ffc2);
+            symbol[n].scale.set(1.3 , 1.3, 1);
+
         } else {
-            symbol[prevTarget].traverse( function ( node ) {
-                if ( node instanceof THREE.Mesh){
-                    node.material.color.setHex(0xffffff);
-                   node.scale.set(1, 1, 1);
-                } 
-            });
+            symbol[prevTarget].children[0].material.color.setHex(0xffffff);
+            symbol[prevTarget].scale.set(1, 1, 1);
+        } 
+        
+        symbol[n].scale.set(1.3, 1.3,1);
+        symbol[n].children[0].material.color.setHex(0x00ffc2);
+        
+        //text.geometry.parameters.text = symbol[n].name;
+        if('undefined' !== typeof text){
+            tooltip.remove(text);
         }
-        symbol[n].traverse( function ( node ) {
-            if ( node instanceof THREE.Mesh){
-                node.material.color.setHex(0x00ffc2);
-                node.scale.set(1.2, 1.2, 1.2);
-            } 
-        });
+        
+        createText(symbol[n].name);
         prevTarget = n;
     }
 }
 //===================================================== Configurator ===============================================================
     function initMenu(){
         
-
+        
+        //____________________________________Tooltip window(without text)____________________________________________________
+        var geometry = new THREE.PlaneBufferGeometry(0.08, 0.02);
+        var material = new THREE.MeshBasicMaterial({
+            color: 0x000000,
+            transparent: true,
+            opacity: 0.8
+        });
+        plane = new THREE.Mesh(geometry,material);
+        plane.position.set(0, 0.015, 0);
+        plane.rotateX(-90*Math.PI/180);
+        tooltip.add(plane);
+        //________________________________________Menu levels__________________________________________________
+        
         menuLevel[0] = new THREE.Object3D();                                                            //main menu for modes
         menuLevel[0].position.set(-0.05, 0, -0.15);                                                     
-        addSymbol(0.05, 0.05, 0.005, 0.005, 0, './images/symbols/mode_configurator.png');               //symbol[0]: configuration mode
-        addSymbol(0.05, 0.05, 0.005, 0.005, 0, './images/symbols/mode_paint.png');                      //symbol[1]: paint mode
+        addSymbol('Configurator', 0.05, 0.05, 0.005, 0.005, 0, './images/symbols/mode_configurator.png');               //symbol[0]: configuration mode
+        addSymbol('Paint', 0.05, 0.05, 0.005, 0.005, 0, './images/symbols/mode_paint.png');                      //symbol[1]: paint mode
         symbol[1].position.x += 0.1;
         viveController.add(menuLevel[0]);
 
@@ -616,18 +684,39 @@ function menu(){
 
         menuLevel[1] = new THREE.Object3D();                                                            //menu for configuration mode
         menuLevel[1].position.set(-0.05, 0 ,-0,15);
-        addSymbol(0.02, 0.02, 0.002, 0.002, 1, './images/symbols/robot.png');                           //symbol[2]: robo
+        addSymbol('Robot', 0.02, 0.02, 0.002, 0.002, 1, './images/symbols/robot.png');                           //symbol[2]: robo
         symbol[2].position.set(0, 0.05, -0.1);
-        addSymbol(0.02, 0.02, 0.002, 0.002, 1);                                                         //symbol[3]
+        addSymbol('CNC', 0.02, 0.02, 0.002, 0.002, 1);                                                         //symbol[3]
         symbol[3].position.set(0, 0.04, -0.07);
-        addSymbol(0.02, 0.02, 0.002, 0.002, 1);                                                         //symbol[4]
+        addSymbol('Workpiece', 0.02, 0.02, 0.002, 0.002, 1);                                                         //symbol[4]
         symbol[4].position.set(0, 0.03, -0.04);
-        addSymbol(0.02, 0.02, 0.002, 0.002, 1);                                                         //symbol[5]
+        addSymbol('Line', 0.02, 0.02, 0.002, 0.002, 1);                                                         //symbol[5]
         symbol[5].position.set(0, 0.02, -0.01);
+
+        /*
+        var geometry = new THREE.PlaneBufferGeometry(0.2, 0.05);
+        
+        plane = new THREE.Mesh(geometry, material);
+        plane.position.set(0, 0.015, 0.05);
+        plane.rotateX(-90*Math.PI/180);
+        tooltip2.add(plane);
+        tooltip2.visible = false;
+        addSymbol()
+        viveController.add(tooltip2); */
+        
+        
+        
+        
+        
+
+
+
         viveController.add(menuLevel[1]);
         menuLevel[1].visible = false;
 
-     
+
+
+        
 
 
     }
@@ -819,7 +908,7 @@ function menu(){
 
 
 
-    function addSymbol(width, height, depth, frame, level, path){
+    function addSymbol(name ,width, height, depth, frame, level, path){
 
         var loader = new THREE.TextureLoader(manager);
         var extrudeSettings = { bevelEnabled: false, depth: depth };
@@ -832,6 +921,7 @@ function menu(){
         });
 
         symbol[symbolCounter] = new THREE.Mesh(geometry, material);
+        symbol[symbolCounter].name = name;
         
 
 
@@ -850,7 +940,7 @@ function menu(){
         shape.holes.push(hole);
 
         var geometry = new THREE.ExtrudeBufferGeometry(shape, extrudeSettings);
-        var material = new THREE.MeshBasicMaterial({color: 0xffffff, side: THREE.DoubleSide});
+        var material = new THREE.MeshPhongMaterial({color: 0xffffff, side: THREE.DoubleSide});
         var extrude = new THREE.Mesh(geometry, material);
         symbol[symbolCounter].add(extrude);
         extrude.position.set(-width/2, -height/2, -depth/2);
@@ -862,4 +952,29 @@ function menu(){
         
             
          
+    }
+
+    function createText(string){
+        var loader = new THREE.FontLoader(manager);
+        loader.load('js/examples/fonts/helvetiker_regular.typeface.json', function(font){
+            var geometry = new THREE.TextGeometry(string, {
+                font: font,
+                size: 0.01,
+                height: 0.002,
+                curveSegments: 12,
+                /*bevelEnabled: true,
+                bevelThickness: 0.001,
+                bevelSize: 0.001,
+                bevelSegments: 1 */
+            });
+            var material = new THREE.MeshPhongMaterial({color: 0xffffff});
+            text = new THREE.Mesh(geometry, material);
+            tooltip.add(text);
+            text.position.set(-text.geometry.parameters.text.length/280, 0.015, 0.005);
+            text.rotateX(-90 * Math.PI/180);
+            
+        
+        viveController.add(tooltip);
+        });
+        
     }
