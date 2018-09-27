@@ -2,19 +2,27 @@
  * @author mrdoob / http://mrdoob.com
  * @author stewdio / http://stewd.io
  */
-
 THREE.ViveController = function ( id ) {
 
 	THREE.Object3D.call( this );
 
 	var scope = this;
 	var gamepad;
+	id= id;
 
 	var axes = [ 0, 0 ];
 	var thumbpadIsPressed = false;
 	var triggerIsPressed = false;
 	var gripsArePressed = false;
 	var menuIsPressed = false;
+
+	const vibeChannel = []
+	vibeChannel.name = ''
+	vibeChannel.intensity = 0
+	this.vibeChannels = [ vibeChannel ]
+	this.vibeChannels.intensity = 0
+	this.vibeChannels.prior = 0
+	
 
 	function findGamepad( id ) {
 
@@ -47,6 +55,9 @@ THREE.ViveController = function ( id ) {
 		return gamepad;
 
 	};
+
+	
+	
 
 	this.getButtonState = function ( button ) {
 
@@ -113,15 +124,136 @@ THREE.ViveController = function ( id ) {
 				scope.dispatchEvent( { type: menuIsPressed ? 'menudown' : 'menuup' } );
 
 			}
+			this.applyVibes(gamepad);	//for vibrations
 
 		} else {
 
 			scope.visible = false;
 
 		}
+		
+		
 
 	};
-//=====================================================================================================
+	//=================================================== Vibrations ==============================================
+	this.applyVibes = function(gamepad){
+
+
+		if( gamepad.hapticActuators && 
+			gamepad.hapticActuators[ 0 ]){
+	
+			const
+			renderedIntensity = this.renderVibes(),
+			now = window.performance.now()
+	
+			if( renderedIntensity !== this.vibeChannels.prior ||
+				now - this.vibeChannels.lastCommanded > VIBE_TIME_MAX / 2 ){
+	
+				this.vibeChannels.lastCommanded = now
+				gamepad.hapticActuators[ 0 ].pulse( renderedIntensity, VIBE_TIME_MAX )
+				this.vibeChannels.prior = renderedIntensity
+			}
+		}
+	}
+
+	this.renderVibes = function(){
+
+
+		//  First we need to clear away any past-due commands,
+		//  and update the current intensity value.
+	
+		const 
+		now = window.performance.now(),
+		controller = this
+	
+		controller.vibeChannels.forEach( function( channel ){
+	
+			while( channel.length && now > channel[ 0 ][ 0 ]){
+	
+				channel.intensity = channel[ 0 ][ 1 ]
+				channel.shift()
+			}
+			if( typeof channel.intensity !== 'number' ) channel.intensity = 0
+		})
+	
+	
+		//  Now each channel knows its current intensity so we can sum those values.
+		
+		const sum = Math.min( 1, Math.max( 0, 
+		
+			this.vibeChannels.reduce( function( sum, channel ){
+		
+				return sum + +channel.intensity
+		
+			}, 0 )
+		))
+		this.vibeChannels.intensity = sum
+		return sum
+	}
+
+	var VIBE_TIME_MAX = 5 * 1000;
+
+	this.setVibe = function(name, intensity){
+	if( typeof name === 'number' && intensity === undefined ){
+
+		intensity = name
+		name = ''
+	}
+	if( typeof name === 'string' ){
+
+		const controller = this,
+		o = {}
+
+
+		//  If this channel does not exist yet we must create it,
+		//  otherwise we want to remove any future commands 
+		//  while careful NOT to delete the ‘intensity’ property.
+
+		let channel = controller.vibeChannels.find( function( channel ){
+
+			return channel.name === name
+		})
+		if( channel === undefined ){
+
+			channel = []
+			channel.name = name
+			channel.intensity = 0
+			controller.vibeChannels.push( channel )
+		}
+		else channel.splice( 0 )
+
+
+		//  If we received a valid intensity then we should apply it now,
+		//  but if not we’ll just hold on to the previously reported intensity.
+		//  This allows us to reselect a channel and apply a wait() command
+		//  before applying an initial set() command!
+
+		if( typeof intensity === 'number' ) channel.intensity = intensity
+		else {
+
+			if( typeof channel.intensity === 'number' ) intensity = channel.intensity
+
+			
+			//  But if we’re SOL then we need to default to zero.
+
+			else intensity = 0
+		}
+
+		let cursor = window.performance.now()
+		o.set = function( intensity ){
+
+			channel.push([ cursor, intensity ])
+			return o
+		}
+		o.wait = function( duration ){
+
+			cursor += duration
+			return o
+		}
+		return o
+	} 
+} 
+//========================================Paint Mode======================================================
 	var PI2 = Math.PI * 2;
 
 	var MODES = { COLOR: 0, SIZE: 1 };
@@ -305,6 +437,7 @@ THREE.ViveController = function ( id ) {
 		paintActive = false;
 		colorUI.visible = false;
 	}
+
 };
 
 THREE.ViveController.prototype = Object.create( THREE.Object3D.prototype );

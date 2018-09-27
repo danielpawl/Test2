@@ -18,12 +18,14 @@ var text;
 var tooltip = new THREE.Object3D();
 var tooltip2 = new THREE.Object3D();
 var symbol = [];
-var symbolCounter = 0;
+var symbolCounter = [0,0,0,0,0,0];
 var menuLevel = [];
 var menuCreated = false;
-var targetNext;
+
 var targetNo = 0;
 var prevTarget = 0;
+var prevLevel = 1;
+
 
 
 var axisX;
@@ -226,7 +228,7 @@ function onTriggerDown(){
         if(firstTimePressed == false){
             firstTimePressed = true;
         } 
-
+        /*
         if (robo[0].visible === true){
             robo[0].visible = false;
             robo[1].visible = true;
@@ -236,7 +238,12 @@ function onTriggerDown(){
         } else if(robo[2].visible === true){
             robo[2].visible = false;
             robo[0].visible = true;
-        }
+        }*/
+
+        viveController.setVibe('bam').set(0.4).wait(30).set(0.1).wait(30).set(0);
+       
+            
+     
 
 
     
@@ -267,12 +274,12 @@ function onThumbpadDown(){
 
     switch(menuStep){
         case 1:
-            if ( axisX <= -border && targetNo !== 0){ 
+            if ( axisX <= -border && targetNo !== symbol[menuStep][0].value ){ 
                 targetNo -= 1; 
                 menu();
                 return;
             } 
-            if ( axisX >= border && targetNo !== 1){
+            if ( axisX >= border && targetNo !== symbol[menuStep][1].value){
                 targetNo += 1; 
                 menu();
                 return;
@@ -280,14 +287,14 @@ function onThumbpadDown(){
             
             if ( axisX <= border && axisX >= -border && axisY <= border && axisY >= -border){
 
-                if( targetNo === 0) {
+                if( targetNo === symbol[menuStep][0].value) {
                     viveController.paintOff();
                     menuStep = 2;
-                    targetNo =2;
+                    targetNo = symbol[menuStep][0].value;
                     menu();
                     return;
                 }    
-                if ( targetNo === 1) {
+                if ( targetNo === symbol[menuStep][1].value) {
                     viveController.paintOn();
                     menuStep = 0;
                     menu();
@@ -295,24 +302,72 @@ function onThumbpadDown(){
                 }
             }
             break;
-        case 2:
-            if (axisY <= -border && targetNo >= 3){
-                targetNo -= 1;
-                menu();
-                return;
-            } if( axisY >= border && targetNo <= 4){
-                targetNo += 1;
+
+        case 2: 
+                                                                                                                            // if( axisY >= border && menuStep < symbol[menuStep][symbolCounter[menuStep]-1].value){
+             if( axisY >= border){              
+                menuStep++;
+                targetNo = symbol[menuStep][0].value;
                 menu();
                 return;
             } 
             if ( axisX <= border && axisX >= -border && axisY <= border && axisY >= -border){
 
                 if( targetNo === 2) {
-                    robo[0].visible = true;
+                   
+                    if (axisX <= border) {
+                        robo[1].position.set(-0.1, -0.05, -0.1);
+                        robo[1].scale.set(0.05, 0.05, 0.05);
+                        robo[2].position.set(0.1, -0.05, -0.1);
+                        robo[2].scale.set(0.05, 0.05, 0.05);
+                    }
                     return;
                 }
-            }    
+            } 
             break;
+        
+        case 3:
+            if( axisY >= border){              
+                menuStep++;
+                targetNo = symbol[menuStep][0].value;
+                menu();
+                return;
+            }
+            if( axisY <= border){
+                menuStep--;
+                targetNo = symbol[menuStep][0].value;
+                menu();
+                return;
+            }
+        
+        case 4:
+            if( axisY >= border){              
+                menuStep++;
+                targetNo = symbol[menuStep][0].value;
+                menu();
+                return;
+            }
+            if( axisY <= border){
+                menuStep--;
+                targetNo = symbol[menuStep][0].value;
+                menu();
+                return;
+            }
+        
+        case 5:
+
+            if( axisY >= border){              
+                menuStep++;
+                targetNo = symbol[menuStep][0].value;
+                menu();
+                return;
+            }
+            if( axisY <= border){
+                menuStep--;
+                targetNo = symbol[menuStep][0].value;
+                menu();
+                return;
+            }
     } 
 
 }
@@ -470,9 +525,7 @@ function initRobo(){
      
 } 
 
-function roboMenu(){
 
-}
 //========================== Window for buttons ==========================================================
 
 function createTutorial(){
@@ -597,61 +650,108 @@ function menu(){
   
     switch(menuStep){                       //case for main menu button
         case 0:
-            menuLevel[0].visible = false;   //mode menu
-            menuLevel[1].visible = false;   //configurator menu
+            menuLevel[1].visible = false;   //mode menu
+            menuLevel[2].visible = false;   //configurator menu
+            menuLevel[3].visible = false;
+            menuLevel[4].visible = false;
+            menuLevel[5].visible = false;
+
             tooltip.visible = false;
             tooltip2.visible = false;
+
+            robo[0].visible = false;
+            robo[1].visible = false;
+            robo[2].visible = false;
             break;
 
         case 1:
-            menuLevel[0].visible = true;
-            menuLevel[1].visible = false;
+            menuLevel[1].visible = true;
+            menuLevel[2].visible = false;
+            menuLevel[3].visible = false;
+            menuLevel[4].visible = false;
+            menuLevel[5].visible = false;
+            
             if('undefined' !== typeof text){
                 tooltip.visible = true;
                 tooltip2.visible = false;
             }
-            target(targetNo);
+            target(1 ,targetNo);
+
+            robo[0].visible = false;
+            robo[1].visible = false;
+            robo[2].visible = false;
                 
             break;
 
         case 2:
-            menuLevel[0].visible = false;
-            menuLevel[1].visible = true;
+            menuLevel[1].visible = false;
+            menuLevel[2].visible = true;
+            menuLevel[3].visible = true;
+            menuLevel[4].visible = true;
+            menuLevel[5].visible = true;
+
             tooltip.visible = true;
             tooltip2.visible = true;
-            robo[0].visible = true;
 
-            target(targetNo);
+            robo[0].visible = true;
+            robo[1].visible = true;
+            robo[2].visible = true;
+        
+            robo[1].position.set(-0.1, -0.05, -0.1);
+            robo[1].scale.set(0.05, 0.05, 0.05);
+            robo[2].position.set(0.1, -0.05, -0.1);
+            robo[2].scale.set(0.05, 0.05, 0.05);
+            
+
+            target(2 , targetNo);
             break;      
+        
+        case 3:
+            menuLevel[1].visible = false;
+            menuLevel[2].visible = true;
+
+            robo[0].visible = false;
+            robo[1].visible = false;
+            robo[2].visible = false;
+
+            target(3, targetNo);
+
+
+            break;
+
+        case 4:
+
+            target(4, targetNo);
+            break;
+
+        case 5:
+
+            target(5, targetNo);
+            break;
     }
 
 
 
 
 
-    function target(n){
-        if (prevTarget == n){
+    function target(l ,n){
+       
+        symbol[prevLevel][prevTarget].children[0].material.color.setHex(0xffffff);
+        symbol[prevLevel][prevTarget].scale.set(1, 1, 1);
         
-            symbol[n].children[0].material.color.setHex(0x00ffc2);
-            symbol[n].scale.set(1.3 , 1.3, 1);
-
-        } else {
-            symbol[prevTarget].children[0].material.color.setHex(0xffffff);
-            symbol[prevTarget].scale.set(1, 1, 1);
-        } 
+        symbol[l][n].scale.set(1.3, 1.3,1);
+        symbol[l][n].children[0].material.color.setHex(0x00ffc2);
         
-        symbol[n].scale.set(1.3, 1.3,1);
-        symbol[n].children[0].material.color.setHex(0x00ffc2);
-        
-        //text.geometry.parameters.text = symbol[n].name;
         if('undefined' !== typeof text){
             tooltip.remove(text);
         }
         
-        createText(symbol[n].name);
+        createText(symbol[l][n].name);
         prevTarget = n;
+        prevLevel = l;
     }
 }
+
 //===================================================== Configurator ===============================================================
     function initMenu(){
         
@@ -669,29 +769,30 @@ function menu(){
         tooltip.add(plane);
         //________________________________________Menu levels__________________________________________________
         
-        menuLevel[0] = new THREE.Object3D();                                                            //main menu for modes
-        menuLevel[0].position.set(-0.05, 0, -0.15);                                                     
-        addSymbol('Configurator', 0.05, 0.05, 0.005, 0.005, 0, './images/symbols/mode_configurator.png');               //symbol[0]: configuration mode
-        addSymbol('Paint', 0.05, 0.05, 0.005, 0.005, 0, './images/symbols/mode_paint.png');                      //symbol[1]: paint mode
-        symbol[1].position.x += 0.1;
-        viveController.add(menuLevel[0]);
+        menuLevel[1] = new THREE.Object3D();                                                            //main menu for modes
+        menuLevel[1].position.set(-0.05, 0, -0.15);
+                                                      
+        addSymbol('Configurator', 0.05, 0.05, 0.005, 0.005, 1, './images/symbols/mode_configurator.png');               //symbol[1][0]: configuration mode
+        addSymbol('Paint', 0.05, 0.05, 0.005, 0.005, 1, './images/symbols/mode_paint.png');                      //symbol[1][1]: paint mode
+        symbol[1][1].position.x += 0.1;
+        viveController.add(menuLevel[1]);
 
-        menuLevel[0].visible = false;
+        menuLevel[1].visible = false;
         
 
 
 
 
-        menuLevel[1] = new THREE.Object3D();                                                            //menu for configuration mode
-        menuLevel[1].position.set(-0.05, 0 ,-0,15);
-        addSymbol('Robot', 0.02, 0.02, 0.002, 0.002, 1, './images/symbols/robot.png');                           //symbol[2]: robo
-        symbol[2].position.set(0, 0.05, -0.1);
-        addSymbol('CNC', 0.02, 0.02, 0.002, 0.002, 1);                                                         //symbol[3]
-        symbol[3].position.set(0, 0.04, -0.07);
-        addSymbol('Workpiece', 0.02, 0.02, 0.002, 0.002, 1);                                                         //symbol[4]
-        symbol[4].position.set(0, 0.03, -0.04);
-        addSymbol('Line', 0.02, 0.02, 0.002, 0.002, 1);                                                         //symbol[5]
-        symbol[5].position.set(0, 0.02, -0.01);
+        menuLevel[2] = new THREE.Object3D();                                                            //menu for configuration mode
+        menuLevel[2].position.set(-0.1, 0 ,-0,15);
+        viveController.add(menuLevel[2]);
+        menuLevel[2].visible = false;
+
+        addSymbol('Robot', 0.02, 0.02, 0.002, 0.002, 2, './images/symbols/robot.png');                          //symbol[2][0]: Robot
+        symbol[2][0].position.set(0, 0.05, -0.1);
+        
+    
+    
 
         /*
         var geometry = new THREE.PlaneBufferGeometry(0.2, 0.05);
@@ -704,6 +805,32 @@ function menu(){
         addSymbol()
         viveController.add(tooltip2); */
         
+        menuLevel[3] = new THREE.Object3D();                                                            //menu for configuration mode
+        menuLevel[3].position.set(-0.1, 0 ,-0,15);
+        viveController.add(menuLevel[3]);
+        menuLevel[3].visible = false;
+
+        addSymbol('CNC', 0.02, 0.02, 0.002, 0.002, 3);                                                          //symbol[2][1]: CNC
+        symbol[3][0].position.set(0, 0.04, -0.07);
+
+        
+
+        menuLevel[4] = new THREE.Object3D();                                                            //menu for configuration mode
+        menuLevel[4].position.set(-0.1, 0 ,-0,15);
+        viveController.add(menuLevel[4]);
+        menuLevel[4].visible = false;
+
+        addSymbol('Workpiece', 0.02, 0.02, 0.002, 0.002, 4);                                                    //symbol[2][2]: Workpiece
+        symbol[4][0].position.set(0, 0.03, -0.04);
+
+        menuLevel[5] = new THREE.Object3D();                                                            //menu for configuration mode
+        menuLevel[5].position.set(-0.1, 0 ,-0,15);
+        viveController.add(menuLevel[5]);
+        menuLevel[5].visible = false;
+
+        addSymbol('Line', 0.02, 0.02, 0.002, 0.002, 5);                                                         //symbol[2][3]: Lines
+        symbol[5][0].position.set(0, 0.02, -0.01);
+        
         
         
         
@@ -711,8 +838,8 @@ function menu(){
 
 
 
-        viveController.add(menuLevel[1]);
-        menuLevel[1].visible = false;
+        
+        
 
 
 
@@ -920,8 +1047,15 @@ function menu(){
             side: THREE.DoubleSide,
         });
 
-        symbol[symbolCounter] = new THREE.Mesh(geometry, material);
-        symbol[symbolCounter].name = name;
+        if(symbol[level] === undefined){
+            symbol[level] = [];
+        }
+        symbol[level][symbolCounter[level]] = new THREE.Mesh(geometry, material);
+        symbol[level][symbolCounter[level]].name = name;
+        //if('undefined' !== typeof symbol[level][symbolCounter[level]].value){
+            symbol[level][symbolCounter[level]].value = symbolCounter[level];
+        //}
+        
         
 
 
@@ -942,13 +1076,13 @@ function menu(){
         var geometry = new THREE.ExtrudeBufferGeometry(shape, extrudeSettings);
         var material = new THREE.MeshPhongMaterial({color: 0xffffff, side: THREE.DoubleSide});
         var extrude = new THREE.Mesh(geometry, material);
-        symbol[symbolCounter].add(extrude);
+        symbol[level][symbolCounter[level]].add(extrude);
         extrude.position.set(-width/2, -height/2, -depth/2);
-        symbol[symbolCounter].rotateX(-75* Math.PI /180);
+        symbol[level][symbolCounter[level]].rotateX(-75* Math.PI /180);
 
-        menuLevel[level].add(symbol[symbolCounter]);
+        menuLevel[level].add(symbol[level][symbolCounter[level]]);
 
-        symbolCounter++;
+        symbolCounter[level]++;
         
             
          
