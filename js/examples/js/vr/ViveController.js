@@ -425,7 +425,7 @@ THREE.ViveController = function ( id ) {
 	}
 
 	this.addEventListener( 'axischanged', onAxisChanged );
-	this.addEventListener( 'gripsdown', onGripsDown );
+	this.addEventListener( 'gripsdown', onGripsDown1 );
 
 	this.paintOn = function() {
 		paintActive = true;
