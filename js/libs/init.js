@@ -1,6 +1,7 @@
 //============================ Declaration ==========================================
 
-var scene, render, renderer, dollyCam, camera, controller1, controller2, clock, cube;
+var scene, render, renderer, dollyCam, camera, controller1, controller2, clock, cube, floor;
+var manager;
 var tutorialWindows = new THREE.Object3D();
 var dragCube = false;
 var firstTimePressed = false;
@@ -15,13 +16,25 @@ var rayGeo, raycaster;
 var rayGroup = [];
 var excludeGroup = [];
 
-
+var pickObj = new THREE.Object3D();
+var copyObj = new THREE.Object3D();
+var alreadyCopied = false;
+var toggleTrigger2 = false;
+var positioningModeOn = false;
+var createdRobo = [];
+var createdRoboCounter = 0;
+var roboState = 0;
+var createdCNC = [];
+var createdCNCCounter = 0;
+var CNCState = 0;
 
 
 var roundPositions = [];
 var robo = [];
 var roboCounter = 0;
-var manager;
+var CNC = [];
+var CNCCounter = 0;
+
 
 
 var menuStep = 0;
@@ -102,13 +115,20 @@ function init(){
 
         clock = new THREE.Clock(); 
 
+        var loader = new THREE.TextureLoader();
         var floorGeo = new THREE.PlaneBufferGeometry(200, 200, 20, 20);
         var floorMat = new THREE.MeshStandardMaterial({
+            map: loader.load('images/textures/floor/floor1.jpg', function(map){
+                map.wrapS = THREE.RepeatWrapping;
+                map.wrapT = THREE.RepeatWrapping;
+                map.anisotropy = 4;
+                map.repeat.set( 600, 600 )
+            }),
             color: 0x222222,
-            roughness: 1.0,
-            metalness: 0.0
+            roughness: 0.5,
+            metalness: 1.0
         });
-        var floor = new THREE.Mesh(floorGeo, floorMat);
+        floor = new THREE.Mesh(floorGeo, floorMat);
         floor.position.set(0,0,0);
         floor.rotateX(-90* Math.PI/180);
         floor.receiveShadow = true;
@@ -120,16 +140,22 @@ function init(){
 
       
         scene.add( new THREE.HemisphereLight( 0x888877, 0x777788 ) );
-        var point = new THREE.DirectionalLight(0xffffff);
-        point.castShadow = true;
-        point.shadow.camera.top = 2;
-        point.shadow.camera.bottom = -2;
-        point.shadow.camera.right = 2;
-        point.shadow.camera.left = -2;
-        point.shadow.mapSize.set( 4096, 4096 );
-        point.shadow.mapSize.set( 4096, 4096 );
-        scene.add(point);
-        point.position.set(0,10,0);
+
+        var x = -100;
+        var z = -100;
+        
+       
+            var point = new THREE.DirectionalLight(0xffffff, 1.5);
+            point.castShadow = true;
+            point.shadow.camera.top = 2;
+            point.shadow.camera.bottom = -2;
+            point.shadow.camera.right = 2;
+            point.shadow.camera.left = -2;
+            point.shadow.mapSize.set( 4096, 4096 );
+            point.shadow.mapSize.set( 4096, 4096 );
+            scene.add(point);
+            point.position.set(0, 10, 0);
+        
 
         var cubeGeo = new THREE.BoxBufferGeometry(2,2,2);
         var cubeMat = new THREE.MeshStandardMaterial({color: 0x00ff00});
@@ -188,6 +214,7 @@ function init(){
     //===================== Functions ================================================
     
     initRobo();
+    initCNC();
     createTracker();
     initGeometry();
     initMenu();
@@ -224,6 +251,7 @@ function render(){
     var count = paintLine.geometry.drawRange.count;
     handleController(controller1);
     updateGeometry( count, paintLine.geometry.drawRange.count );
+    positioningMode();
     
 }
 
@@ -468,7 +496,7 @@ function onTriggerDown2(){
 }
 
 function onTriggerUp2(){
-
+    toggleTrigger2 = true;
 }
 
 function onAxisChanged2(){
@@ -617,68 +645,171 @@ function handleIntersections(){
                 controller1.paintOn();
                 menuStep = 0;
                 menu();
+                return;
             }
             
 			else if (object.name === "Configurator") {
                 menuStep = 2;
                 menu();
+                return;
+            } else if (object.name === "Robot") {
+                menuStep = 2;
+                menu();
+                return;
+            } else if (object.name === "CNC") {
+                menuStep = 3;
+                menu();
+                return;
             } else if (object.name === 'next'){
-                /*robo[0].position.set(roundPositions[0].position.x, roundPositions[0].position.y, roundPositions[0].position.z);
-                robo[0].scale.set(0.05, 0.05, 0.05);
-                robo[1].position.set(roundPositions[2].position.x, roundPositions[2].position.y, roundPositions[2].position.z);
-                robo[1].scale.set(0.05, 0.05, 0.05);
-                robo[2].position.set(roundPositions[1].position.x, roundPositions[1].position.y, roundPositions[1].position.z);
-                robo[2].scale.set(0.15, 0.15, 0.15); */
+                if (menuStep === 2){
+                    roboState++;
+                } if (menuStep === 3){
+                    CNCState++;
+                }
+                    
+                switchPick();
 
-                switchRobo();
+                return;
 
+            } else if (object.name === 'previous'){
+                roboState--;
+                switchPick();
+
+                return;
+
+            } else if (object.name === 'pick'){
+                controller2.add(pickObj);
+                pickObj.position.set(roundPositions[1].position.x, roundPositions[1].position.y, roundPositions[1].position.z);
+                pickObj.traverse( function ( node ) {
+                    if ( node instanceof THREE.Mesh){
+                        node.material.transparent = true;
+                        node.material.opacity = 0.5;
+                        
+                    }
+                });
+
+                positioningModeOn = true;
+                toggleTrigger2 = false;
+                return;
             }
         }
 	
 }
 
-var roboState = 0;
-function switchRobo(){
-    
-    switch(roboState){
+function positioningMode(){
+    if (positioningModeOn === true){
+        var intersections = getIntersections(controller2);
+        if (intersections.length > 0){
+            var intersection = intersections[0];
+            var object = intersection.object;
 
-        case 0:
-            getRoundPos(1, robo[0]);
-            getRoundPos(0, robo[1]);
-            getRoundPos(2, robo[2]);
+            var position = new THREE.Vector3(0, 0, 0);
+            position = intersection.point;
 
-            getBig(robo[0]);
-            getSmall(robo[1]);
-            getSmall(robo[2]);
-
-            roboState = 1;
-            break;
-
-        case 1:
-            getRoundPos(0, robo[0]);
-            getRoundPos(2, robo[1]);
-            getRoundPos(1, robo[2]);
-
-            getSmall(robo[0]);
-            getSmall(robo[1]);
-            getBig(robo[2]);
+            if (alreadyCopied === false){
+                copyObj = pickObj.clone();
+                copyObj.scale.set(3, 3, 3);
+                copyObj.lookAt(0, 1, 0);
+                scene.add(copyObj);
+                alreadyCopied = true;
+            }
             
-            roboState = 2;
-            break;
-        
-        case 2:
-            getRoundPos(2, robo[0]);
-            getRoundPos(1, robo[1]);
-            getRoundPos(0, robo[2]);
-
-            getSmall(robo[0]);
-            getBig(robo[1]);
-            getSmall(robo[2]);
-
-            roboState = 0;
-
-            break;
+            if (object.name === 'floor'){
+                copyObj.position.set(position.x, position.y, position.z);
+            }
+            
+            if( controller2.getButtonState( 'trigger') === true && toggleTrigger2 === true ){
+                copyObj.traverse( function ( node ) {
+                    if ( node instanceof THREE.Mesh){
+                        node.material.transparent = false;
+                        node.material.opacity = 1;
+                    }
+                });
+                controller2.remove(pickObj);
+                if (menuStep === 2){
+                    createdRobo[createdRoboCounter] = copyObj;
+                    createdRoboCounter++;
+                    alreadyCopied = false;
+                } else if ( menuStep === 3){
+                    createdCNC[createdCNCCounter] = copyObj;
+                    createdCNCCounter++;
+                    alreadyCopied = false;
+                }
+                positioningModeOn = false; 
+            } 
+            
+        }
     }
+    
+    
+}
+
+
+
+function switchPick(){
+    if ( roboState <= -1) {
+        roboState = 2;
+    } else if (roboState >= 3){
+        roboState = 0;
+    }
+    if (menuStep === 2){
+        switch(roboState){
+
+            case 0:
+                
+                getRoundPos(1, robo[0]);
+                getRoundPos(0, robo[1]);
+                getRoundPos(2, robo[2]);
+    
+                getBig(robo[0]);
+                getSmall(robo[1]);
+                getSmall(robo[2]);
+    
+    
+                pickObj = robo[0].clone();
+                /*
+                pickObj.position.set(0.1, 0.1, 0.1);
+                controller1.add(pickObj);
+                rayGroup.push(pickObj);*/
+    
+                break;
+    
+            case 1:
+                getRoundPos(0, robo[0]);
+                getRoundPos(2, robo[1]);
+                getRoundPos(1, robo[2]);
+    
+                getSmall(robo[0]);
+                getSmall(robo[1]);
+                getBig(robo[2]);
+    
+                pickObj = robo[2].clone();
+                
+                break;
+            
+            case 2:
+                getRoundPos(2, robo[0]);
+                getRoundPos(1, robo[1]);
+                getRoundPos(0, robo[2]);
+    
+                getSmall(robo[0]);
+                getBig(robo[1]);
+                getSmall(robo[2]);
+    
+                pickObj = robo[1].clone();
+    
+                break;
+        }
+    } else if (menuStep === 3){
+        if (CNCState === 1){
+            CNCState = 0;
+        }
+        switch(CNCState){
+            case 0:
+                pickObj = CNC[0].clone();
+        }
+    }
+    
 
     
     function getRoundPos(i , robo){
@@ -699,7 +830,7 @@ function switchRobo(){
     }
 }
 
-//==============================Robo=================================================================
+//============================== Robo =================================================================
 function initRobo(){
     loadRobo('kuka kr5 r650', 'models/dae/robo/kuka-kr5-r650.dae');
     loadRobo('kuka kr5 r850','models/dae/robo/kuka-kr5-r850.dae');
@@ -748,6 +879,52 @@ function initRobo(){
      
 } 
 
+//========================== CNC =========================================================================
+function initCNC(){
+    loadCNC('CNC', 'models/dae/CNC/CNC.dae');
+    function loadCNC(name, path){
+        var colladaLoader = new THREE.ColladaLoader(manager);
+        var textureLoader = new THREE.TextureLoader(manager);
+        var dae;
+        var oldMat = new THREE.MeshPhongMaterial() ;
+        colladaLoader.load(path, function(collada){
+            dae = collada.scene;
+            dae.traverse( function ( node ) {
+                if ( node instanceof THREE.Mesh){
+                    //oldMat.color = node.material.color
+                    //node.material = oldMat;
+                    node.castShadow = true;
+                    node.material.flatShading = true;
+                    
+                } 
+            }); 
+
+
+            
+            scene.add(dae);
+            controller1.add(dae);
+            dae.scale.set(0.05 , 0.05, 0.05);
+            
+            dae.position.set(0, -0.015, -0.045);
+            dae.rotateX(-60* Math.PI/180);
+            CNC[CNCCounter] = dae;
+            CNC[CNCCounter].visible = false;
+            CNC[CNCCounter].name = name;
+            CNCCounter++;
+
+
+
+        },
+        function ( xhr ) {
+        console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+        },
+
+        function ( error ) {
+        console.log( 'An error happened' )
+        })
+    }
+
+}
 
 //========================== Window for buttons ==========================================================
 
@@ -921,6 +1098,8 @@ function menu(){
             robo[0].visible = true;
             robo[1].visible = true;
             robo[2].visible = true;
+
+            CNC[0].visible = false;
         
             robo[1].position.set(roundPositions[0].position.x, roundPositions[0].position.y, roundPositions[0].position.z);
             robo[1].scale.set(0.05, 0.05, 0.05);
@@ -939,6 +1118,8 @@ function menu(){
             robo[0].visible = false;
             robo[1].visible = false;
             robo[2].visible = false;
+
+            CNC[0].visible = true;
 
 
 
@@ -963,7 +1144,7 @@ function menu(){
 
 //===================================================== Configurator ===============================================================
     function initMenu(){
-        
+        controller1.add(pickObj);
         
         //____________________________________Tooltip window(without text)____________________________________________________
         var geometry = new THREE.PlaneBufferGeometry(0.08, 0.02);
@@ -1005,6 +1186,15 @@ function menu(){
 
         addSymbol('Robot', 0.02, 0.02, 0.002, 0.002, 2, './images/symbols/robot.png');                          //symbol[2][0]: Robot
         symbol[2][0].position.set(0, 0.05, -0.1);
+
+        var geometry = new THREE.PlaneBufferGeometry(0.05, 0.05);
+        var material = new THREE.MeshPhongMaterial({color: 0xffff00});
+        var pick = new THREE.Mesh(geometry, material);
+        pick.position.set(0, 0.05, 0.05);
+        pick.rotateX(-90 * Math.PI /180);
+        pick.name = "pick";
+
+        menuLevel[2].add(pick);
         
     
     
