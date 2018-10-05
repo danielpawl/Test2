@@ -27,6 +27,13 @@ var roboState = 0;
 var createdCNC = [];
 var createdCNCCounter = 0;
 var CNCState = 0;
+var createdWorkpiece = [];
+var createdWorkpieceCounter = 0;
+var workpieceState = 0;
+var createdConveyor = [];
+var createdConveyorCounter = 0;
+var conveyorState = 0;
+
 
 
 var roundPositions = [];
@@ -34,6 +41,9 @@ var robo = [];
 var roboCounter = 0;
 var CNC = [];
 var CNCCounter = 0;
+var workpiece = [];
+var conveyor = [];
+var conveyorCounter = 0;
 
 
 
@@ -138,14 +148,40 @@ function init(){
         rayGroup.push(floor);
         scene.add(floor);
 
-      
-        scene.add( new THREE.HemisphereLight( 0x888877, 0x777788 ) );
+        var hemi =  new THREE.HemisphereLight( 0x888877, 0x777788 );
+        hemi.position.set(0, 10, 0);
+        scene.add(hemi );
 
+        var pointLight = [];
+
+          
         var x = -100;
         var z = -100;
+
+        /*for (var i = 0; i <= 7; i++){
+            pointLight[i] = new THREE.PointLight(0xffffff, 1, 0, 2);
+            pointLight[i].position.set(x , 1000, z);
+            x += 100;
+            if( x >= 100){
+                x = -100;
+                z += 100;
+            }
+            scene.add(pointLight[i]);
+        } */
+
+        pointLight[0] = new THREE.PointLight(0xffffff, 1, 300, 2);
+        pointLight[0].position.set(-100 , 100, 0);
+        pointLight[1] = new THREE.PointLight(0xffffff, 1, 300, 2);
+        pointLight[1].position.set(100 , 100, 0);
+        pointLight[2] = new THREE.PointLight(0xffffff, 1, 300, 2);
+        pointLight[2].position.set(0 , 100, 100);
+        pointLight[3] = new THREE.PointLight(0xffffff, 1, 300, 2);
+        pointLight[3].position.set(0, 100, -100);
+        scene.add(pointLight[0], pointLight[1], pointLight[2], pointLight[3],)
+      
         
        
-            var point = new THREE.DirectionalLight(0xffffff, 1.5);
+            var point = new THREE.DirectionalLight(0xffffff, 0.5);
             point.castShadow = true;
             point.shadow.camera.top = 2;
             point.shadow.camera.bottom = -2;
@@ -153,12 +189,16 @@ function init(){
             point.shadow.camera.left = -2;
             point.shadow.mapSize.set( 4096, 4096 );
             point.shadow.mapSize.set( 4096, 4096 );
+            point.shadow.bias = -0.0001;
             scene.add(point);
             point.position.set(0, 10, 0);
         
 
         var cubeGeo = new THREE.BoxBufferGeometry(2,2,2);
-        var cubeMat = new THREE.MeshStandardMaterial({color: 0x00ff00});
+        var cubeMat = new THREE.MeshStandardMaterial({
+            color: 0x00ff00,
+            roughness: 0
+        });
         cube = new THREE.Mesh(cubeGeo, cubeMat);
         cube.position.set(camera.position.x, camera.position.y, camera.position.z -5);
         cube.castShadow = true;
@@ -215,6 +255,8 @@ function init(){
     
     initRobo();
     initCNC();
+    initWorkpiece();
+    initConveyor();
     createTracker();
     initGeometry();
     initMenu();
@@ -246,6 +288,10 @@ function render(){
         robo[0].rotation.z += 0.01;
         robo[1].rotation.z += 0.01;
         robo[2].rotation.z += 0.01;
+
+        CNC[0].rotation.z += 0.01;
+
+        workpiece[0].rotation.y += 0.01;
     };
 
     var count = paintLine.geometry.drawRange.count;
@@ -579,12 +625,12 @@ function intersectObjects(controller) {
         if(object.name === 'frame') return;
 
         if(object.name !== 'floor' && lastIntersected !== object){
-            controller2.setVibe('pick').set(0.05).wait(10).set(0);
+            controller2.setVibe('bam').set(0.05).wait(50).set(0);
             
             
         }
         if(object.name !== 'floor' && object.name !== 'frame'){
-            object.scale.set(1.3, 1.3,1);
+            object.scale.set(1.3, 1.3, 1);
             object.material.emissive.b = 1;
         }
         
@@ -608,12 +654,13 @@ function intersectObjects(controller) {
         //line.scale.y = intersection.distance;
         //line.scale.z = intersection.distance;
         
+        cleanIntersected();
+        lastIntersected = object;
     }
     else {
         //line.scale.set(0, 0.1 ,0.1);
     }
-    cleanIntersected();
-    lastIntersected = object;
+    
 }
 
 function cleanIntersected() {
@@ -660,11 +707,21 @@ function handleIntersections(){
                 menuStep = 3;
                 menu();
                 return;
+            } else if (object.name === "Workpiece") {
+                menuStep = 4;
+                menu();
+                return;
+            } else if (object.name === "Conveyor") {
+                menuStep = 5;
+                menu();
+                return;
             } else if (object.name === 'next'){
                 if (menuStep === 2){
                     roboState++;
                 } if (menuStep === 3){
                     CNCState++;
+                } if ( menuStep === 4){
+                    workpieceState++;
                 }
                     
                 switchPick();
@@ -708,7 +765,7 @@ function positioningMode(){
 
             if (alreadyCopied === false){
                 copyObj = pickObj.clone();
-                copyObj.scale.set(3, 3, 3);
+                copyObj.scale.set(1, 1, 1);
                 copyObj.lookAt(0, 1, 0);
                 scene.add(copyObj);
                 alreadyCopied = true;
@@ -734,7 +791,16 @@ function positioningMode(){
                     createdCNC[createdCNCCounter] = copyObj;
                     createdCNCCounter++;
                     alreadyCopied = false;
-                }
+                } else if ( menuStep === 4){
+                    createdWorkpiece[createdWorkpieceCounter] = copyObj;
+                    //createdWorkpiece[createdWorkpieceCounter].position.y +=copyObj.geometry.parameters.height;
+                    createdWorkpieceCounter++;
+                    alreadyCopied = false;
+                } else if ( menuStep === 5){
+                    createdConveyor[createdConveyorCounter] = copyObj;
+                    createdConveyorCounter++;
+                    alreadyCopied = false;
+                } 
                 positioningModeOn = false; 
             } 
             
@@ -808,7 +874,32 @@ function switchPick(){
             case 0:
                 pickObj = CNC[0].clone();
         }
+    } else if (menuStep === 4){
+        if (workpieceState === 2){
+            workpieceState = 0;
+        }
+        switch(workpieceState){
+            case 0:
+                workpiece[0].position.set(roundPositions[1].position.x, roundPositions[1].position.y, roundPositions[1].position.z);
+                workpiece[1].position.set(roundPositions[0].position.x, roundPositions[0].position.y, roundPositions[0].position.z);
+                pickObj = workpiece[0].clone();
+                break;
+            case 1:
+                workpiece[1].position.set(roundPositions[1].position.x, roundPositions[1].position.y, roundPositions[1].position.z);
+                workpiece[0].position.set(roundPositions[0].position.x, roundPositions[0].position.y, roundPositions[0].position.z);
+                pickObj = workpiece[1].clone();
+                break;
+        } 
+    }  else if (menuStep === 5){
+        if (conveyorState === 1){
+            conveyorState = 0;
+        }
+        switch(conveyorState){
+            case 0:
+                pickObj = conveyor[0].clone();
+        }
     }
+    
     
 
     
@@ -926,6 +1017,80 @@ function initCNC(){
 
 }
 
+//========================== Workpiece ===================================================================
+
+function initWorkpiece(){
+    var loader = new THREE.TextureLoader(manager);
+    var geometry = new THREE.BoxBufferGeometry(0.5, 0.5, 0.5);
+    
+    var material = new THREE.MeshStandardMaterial({
+        color: 0x207e27,
+        metalness: 0.5,
+        roughness: 0.0
+    })
+    workpiece[0] = new THREE.Mesh(geometry, material);
+    scene.add(workpiece[0]);
+    controller1.add(workpiece[0]);
+    workpiece[0].scale.set(0.1 , 0.1, 0.1);
+    workpiece[0].position.set(0, -0.015, -0.06);
+    workpiece[0].rotateX(-60 * Math.PI / 180);
+    workpiece[0].visible = false;
+
+
+    var geometry = new THREE.SphereBufferGeometry(0.5, 32, 32);
+    workpiece [1] = new THREE.Mesh(geometry, material);
+    scene.add(workpiece[1]);
+    controller1.add(workpiece[1]);
+    workpiece[1].position.set(0, -0.015, -0.06);
+    workpiece[1].visible = false;
+}
+//============================== Conveyor ==============================================================
+
+function initConveyor(){
+    loadConveyor('CNC', 'models/dae/Conveyor/forder.dae');
+    function loadConveyor(name, path){
+        var colladaLoader = new THREE.ColladaLoader(manager);
+        var textureLoader = new THREE.TextureLoader(manager);
+        var dae;
+        var oldMat = new THREE.MeshPhongMaterial() ;
+        colladaLoader.load(path, function(collada){
+            dae = collada.scene;
+            dae.traverse( function ( node ) {
+                if ( node instanceof THREE.Mesh){
+                    //oldMat.color = node.material.color
+                    //node.material = oldMat;
+                    node.castShadow = true;
+                    node.material.flatShading = true;
+                    
+                } 
+            }); 
+
+
+            
+            scene.add(dae);
+            controller1.add(dae);
+            dae.scale.set(0.05 , 0.05, 0.05);
+            
+            dae.position.set(0, -0.015, -0.045);
+            dae.rotateX(-60* Math.PI/180);
+            conveyor[conveyorCounter] = dae;
+            conveyor[conveyorCounter].visible = false;
+            conveyor[conveyorCounter].name = name;
+            conveyorCounter++;
+
+
+
+        },
+        function ( xhr ) {
+        console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+        },
+
+        function ( error ) {
+        console.log( 'An error happened' )
+        })
+    }
+
+}
 //========================== Window for buttons ==========================================================
 
 function createTutorial(){
@@ -1063,6 +1228,9 @@ function menu(){
             robo[1].visible = false;
             robo[2].visible = false;
 
+            workpiece[0].visible = false;
+            workpiece[1].visible = false;
+
             break;
 
         case 1:
@@ -1082,6 +1250,9 @@ function menu(){
             robo[0].visible = false;
             robo[1].visible = false;
             robo[2].visible = false;
+
+            workpiece[0].visible = false;
+            workpiece[1].visible = false;
                 
             break;
 
@@ -1100,6 +1271,8 @@ function menu(){
             robo[2].visible = true;
 
             CNC[0].visible = false;
+            workpiece[0].visible = false;
+            workpiece[1].visible = false;
         
             robo[1].position.set(roundPositions[0].position.x, roundPositions[0].position.y, roundPositions[0].position.z);
             robo[1].scale.set(0.05, 0.05, 0.05);
@@ -1120,18 +1293,38 @@ function menu(){
             robo[2].visible = false;
 
             CNC[0].visible = true;
+            workpiece[0].visible = false;
+            workpiece[1].visible = false;
 
 
 
             break;
 
         case 4:
+            robo[0].visible = false;
+            robo[1].visible = false;
+            robo[2].visible = false;
 
+            CNC[0].visible = false;
+
+            workpiece[0].visible = true;
+            workpiece[1].visible = true;
+            workpiece[1].position.set(roundPositions[0].position.x, roundPositions[0].position.y, roundPositions[0].position.z);
+            workpiece[1].scale.set(0.1, 0.1, 0.1);
         
             break;
 
         case 5:
+            robo[0].visible = false;
+            robo[1].visible = false;
+            robo[2].visible = false;
 
+            CNC[0].visible = false;
+
+            workpiece[0].visible = false;
+            workpiece[1].visible = false;
+
+            conveyor[0].visible = true;
             break;
     }
 
@@ -1185,12 +1378,12 @@ function menu(){
         menuLevel[2].visible = false;
 
         addSymbol('Robot', 0.02, 0.02, 0.002, 0.002, 2, './images/symbols/robot.png');                          //symbol[2][0]: Robot
-        symbol[2][0].position.set(0, 0.05, -0.1);
+        symbol[2][0].position.set(0, 0.05, 0.02);
 
         var geometry = new THREE.PlaneBufferGeometry(0.05, 0.05);
         var material = new THREE.MeshPhongMaterial({color: 0xffff00});
         var pick = new THREE.Mesh(geometry, material);
-        pick.position.set(0, 0.05, 0.05);
+        pick.position.set(0.2, 0.05, 0.05);
         pick.rotateX(-90 * Math.PI /180);
         pick.name = "pick";
 
@@ -1216,7 +1409,7 @@ function menu(){
         menuLevel[3].visible = false;
 
         addSymbol('CNC', 0.02, 0.02, 0.002, 0.002, 3);                                                          //symbol[2][1]: CNC
-        symbol[3][0].position.set(0, 0.04, -0.07);
+        symbol[3][0].position.set(0, 0.04, 0.05);
 
         
 
@@ -1226,15 +1419,15 @@ function menu(){
         menuLevel[4].visible = false;
 
         addSymbol('Workpiece', 0.02, 0.02, 0.002, 0.002, 4);                                                    //symbol[2][2]: Workpiece
-        symbol[4][0].position.set(0, 0.03, -0.04);
+        symbol[4][0].position.set(0, 0.03, 0.08);
 
         menuLevel[5] = new THREE.Object3D();                                                            //menu for configuration mode
         menuLevel[5].position.set(-0.1, 0 ,-0,15);
         controller1.add(menuLevel[5]);
         menuLevel[5].visible = false;
 
-        addSymbol('Line', 0.02, 0.02, 0.002, 0.002, 5);                                                         //symbol[2][3]: Lines
-        symbol[5][0].position.set(0, 0.02, -0.01);
+        addSymbol('Conveyor', 0.02, 0.02, 0.002, 0.002, 5);                                                         //symbol[2][3]: Lines
+        symbol[5][0].position.set(0, 0.02, 0.11);
         
         
         
