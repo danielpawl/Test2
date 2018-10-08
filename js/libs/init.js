@@ -10,6 +10,7 @@ var intersected = [];
 var lastIntersected;
 var arrow;
 
+var robotest;
 
 
 var rayGeo, raycaster;
@@ -181,17 +182,17 @@ function init(){
       
         
        
-            var point = new THREE.DirectionalLight(0xffffff, 0.5);
-            point.castShadow = true;
-            point.shadow.camera.top = 2;
-            point.shadow.camera.bottom = -2;
-            point.shadow.camera.right = 2;
-            point.shadow.camera.left = -2;
-            point.shadow.mapSize.set( 4096, 4096 );
-            point.shadow.mapSize.set( 4096, 4096 );
-            point.shadow.bias = -0.0001;
-            scene.add(point);
-            point.position.set(0, 10, 0);
+        var point = new THREE.DirectionalLight(0xffffff, 0.5);
+        point.castShadow = true;
+        point.shadow.camera.top = 2;
+        point.shadow.camera.bottom = -2;
+        point.shadow.camera.right = 2;
+        point.shadow.camera.left = -2;
+        point.shadow.mapSize.set( 4096, 4096 );
+        point.shadow.mapSize.set( 4096, 4096 );
+        point.shadow.bias = -0.0001;
+        scene.add(point);
+        point.position.set(0, 10, 0);
         
 
         var cubeGeo = new THREE.BoxBufferGeometry(2,2,2);
@@ -260,6 +261,8 @@ function init(){
     createTracker();
     initGeometry();
     initMenu();
+
+
     
 
 
@@ -285,12 +288,13 @@ function render(){
     intersectObjects(controller2);
     //cleanIntersected();
     if(clock.getElapsedTime() >= 2){
-        robo[0].rotation.z += 0.01;
-        robo[1].rotation.z += 0.01;
-        robo[2].rotation.z += 0.01;
-
+        for (var i = 0; i <= robo.length -1 ; i++){
+            if (robo[i] !== undefined){
+              // robo[i].rotation.y += 0.01;
+            }
+        }
+        
         CNC[0].rotation.z += 0.01;
-
         workpiece[0].rotation.y += 0.01;
     };
 
@@ -739,9 +743,15 @@ function handleIntersections(){
                 pickObj.position.set(roundPositions[1].position.x, roundPositions[1].position.y, roundPositions[1].position.z);
                 pickObj.traverse( function ( node ) {
                     if ( node instanceof THREE.Mesh){
-                        node.material.transparent = true;
-                        node.material.opacity = 0.5;
-                        
+                        if (node.material.length > 0){
+                            for (var i = 0; i <= node.material.length -1 ; i++){
+                                node.material[i].transparent = true;
+                                node.material[i].opacity = 0.5;
+                            }
+                        } else {
+                            node.material.transparent = true;
+                            node.material.opacity = 0.5;
+                        }
                     }
                 });
 
@@ -765,7 +775,12 @@ function positioningMode(){
 
             if (alreadyCopied === false){
                 copyObj = pickObj.clone();
-                copyObj.scale.set(1, 1, 1);
+                if(pickObj.factor !== undefined){
+                    copyObj.scale.set(1 * pickObj.factor, 1 * pickObj.factor, 1 * pickObj.factor);
+                } else {
+                    copyObj.scale.set(1 , 1 , 1 );
+                }
+                
                 copyObj.lookAt(0, 1, 0);
                 scene.add(copyObj);
                 alreadyCopied = true;
@@ -778,8 +793,15 @@ function positioningMode(){
             if( controller2.getButtonState( 'trigger') === true && toggleTrigger2 === true ){
                 copyObj.traverse( function ( node ) {
                     if ( node instanceof THREE.Mesh){
-                        node.material.transparent = false;
-                        node.material.opacity = 1;
+                        if (node.material.length > 0){
+                            for (var i = 0; i <= node.material.length -1 ; i++){
+                                node.material[i].transparent = false;
+                                node.material[i].opacity = 1
+                            }
+                        } else {
+                            node.material.transparent = false;
+                            node.material.opacity = 1;
+                        }
                     }
                 });
                 controller2.remove(pickObj);
@@ -823,46 +845,41 @@ function switchPick(){
 
             case 0:
                 
-                getRoundPos(1, robo[0]);
-                getRoundPos(0, robo[1]);
-                getRoundPos(2, robo[2]);
+                getRoundPos();
     
-                getBig(robo[0]);
-                getSmall(robo[1]);
+                getSmall(robo[0]);
+                getBig(robo[1]);
                 getSmall(robo[2]);
     
     
-                pickObj = robo[0].clone();
-                /*
-                pickObj.position.set(0.1, 0.1, 0.1);
-                controller1.add(pickObj);
-                rayGroup.push(pickObj);*/
+                pickObj = robo[1].clone();
+                pickObj.factor = robo[1].factor;
+                
+
     
                 break;
     
             case 1:
-                getRoundPos(0, robo[0]);
-                getRoundPos(2, robo[1]);
-                getRoundPos(1, robo[2]);
+                getRoundPos();
     
                 getSmall(robo[0]);
                 getSmall(robo[1]);
                 getBig(robo[2]);
     
                 pickObj = robo[2].clone();
+                pickObj.factor = robo[2].factor;
                 
                 break;
             
             case 2:
-                getRoundPos(2, robo[0]);
-                getRoundPos(1, robo[1]);
-                getRoundPos(0, robo[2]);
+                getRoundPos();
     
-                getSmall(robo[0]);
-                getBig(robo[1]);
+                getBig(robo[0]);
+                getSmall(robo[1]);
                 getSmall(robo[2]);
     
-                pickObj = robo[1].clone();
+                pickObj = robo[0].clone();
+                pickObj.factor = robo[0].factor;
     
                 break;
         }
@@ -903,70 +920,127 @@ function switchPick(){
     
 
     
-    function getRoundPos(i , robo){
-        robo.position.x = roundPositions[i].position.x;
-        robo.position.y = roundPositions[i].position.y;
-        robo.position.z = roundPositions[i].position.z;
+    function getRoundPos(){
+        switch(roboState){
+            case 0:
+                robo[0].position.x = roundPositions[0].position.x;
+                robo[0].position.y = roundPositions[0].position.y;
+                robo[0].position.z = roundPositions[0].position.z;
+
+                robo[1].position.x = roundPositions[1].position.x;
+                robo[1].position.y = roundPositions[1].position.y;
+                robo[1].position.z = roundPositions[1].position.z;
+
+                robo[2].position.x = roundPositions[2].position.x;
+                robo[2].position.y = roundPositions[2].position.y;
+                robo[2].position.z = roundPositions[2].position.z;
+                break;
+
+            case 1: 
+                robo[0].position.x = roundPositions[2].position.x;
+                robo[0].position.y = roundPositions[2].position.y;
+                robo[0].position.z = roundPositions[2].position.z;
+
+                robo[1].position.x = roundPositions[0].position.x;
+                robo[1].position.y = roundPositions[0].position.y;
+                robo[1].position.z = roundPositions[0].position.z;
+
+                robo[2].position.x = roundPositions[1].position.x;
+                robo[2].position.y = roundPositions[1].position.y;
+                robo[2].position.z = roundPositions[1].position.z;
+                break;
+            
+            case 2:
+                robo[0].position.x = roundPositions[1].position.x;
+                robo[0].position.y = roundPositions[1].position.y;
+                robo[0].position.z = roundPositions[1].position.z;
+
+                robo[1].position.x = roundPositions[2].position.x;
+                robo[1].position.y = roundPositions[2].position.y;
+                robo[1].position.z = roundPositions[2].position.z;
+
+                robo[2].position.x = roundPositions[0].position.x;
+                robo[2].position.y = roundPositions[0].position.y;
+                robo[2].position.z = roundPositions[0].position.z;
+                break;  
+        }
         return;
     }
 
     function getBig(robo){
-        robo.scale.set(0.15, 0.15, 0.15);
+        robo.scale.set(0.15 * robo.factor, 0.15 * robo.factor, 0.15 * robo.factor);
         return;
     }
 
     function getSmall(robo){
-        robo.scale.set(0.05, 0.05, 0.05);
+        robo.scale.set(0.05 * robo.factor, 0.05 * robo.factor, 0.05 * robo.factor);
         return;
     }
 }
 
 //============================== Robo =================================================================
 function initRobo(){
-    loadRobo('kuka kr5 r650', 'models/dae/robo/kuka-kr5-r650.dae');
-    loadRobo('kuka kr5 r850','models/dae/robo/kuka-kr5-r850.dae');
-    loadRobo('UR5','models/dae/robo/UR5.dae')
-    function loadRobo(name, path){
-        var colladaLoader = new THREE.ColladaLoader(manager);
-        var textureLoader = new THREE.TextureLoader(manager);
-        var dae;
-        var oldMat = new THREE.MeshPhongMaterial() ;
-        colladaLoader.load(path, function(collada){
-            dae = collada.scene;
-            dae.traverse( function ( node ) {
-                if ( node instanceof THREE.Mesh){
-                    //oldMat.color = node.material.color
-                    //node.material = oldMat;
-                    node.castShadow = true;
-                    node.material.flatShading = true;
-                    
-                } 
-            }); 
-
-
+    loadRobo('U3', 'models/js/robo/ur3.js', 2, 'y');
+    loadRobo('TX200', 'models/js/robo/tx200.js', 2, 'z');
+    loadRobo('Ts80','models/js/robo/ts80.js', 2, 'z' );
+        
+            //robo[roboCounter].visible = false;
             
-            scene.add(dae);
-            controller1.add(dae);
-            dae.scale.set(0.15 , 0.15, 0.15);
             
-            dae.position.set(0, -0.015, -0.045);
-            dae.rotateX(-60* Math.PI/180);
-            robo[roboCounter] = dae;
-            robo[roboCounter].visible = false;
-            robo[roboCounter].name = name;
-            roboCounter++;
 
-
-
-        },
-        function ( xhr ) {
-        console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
-        },
-
-        function ( error ) {
-        console.log( 'An error happened' )
-        })
-    }
+    function loadRobo(name, path, height, axis){
+        var loader = new THREE.JSONLoader(manager);
+    
+        // load a resource
+        loader.load(
+            // resource URL
+            path,
+    
+            // onLoad callback
+            function ( geometry, material ) {
+                for ( var i = 0; i <= material.length -1; i++){
+                    material[i].morphTargets = true;
+                }
+                
+    
+                var materials = new THREE.MeshFaceMaterial(material );
+                object = new THREE.Mesh(geometry, materials);
+                
+                
+    
+                scene.add( object);
+                if ( axis === 'y'){
+                    scaling(object, axis);
+                    object.scale.set(height * object.factor, height * object.factor, height * object.factor);
+                } else if ( axis === 'z'){
+                    scaling(object, axis);
+                    object.scale.set(height * object.factor, height * object.factor, height * object.factor);
+                    object.rotateX(-90 * Math.PI / 180);
+                }
+                
+                object.rotateX(-60* Math.PI/180);
+                controller1.add(object);
+                object.position.set(0, -0.015, -0.045);
+                robo[roboCounter] = object;
+                robo[roboCounter].visible = false;
+                robo[roboCounter].name = name;
+                roboCounter++;
+                
+                
+    
+                robotest = object;
+            },
+    
+            // onProgress callback
+            function ( xhr ) {
+                console.log( (xhr.loaded / xhr.total * 100) + '% loaded JSON' );
+            },
+    
+            // onError callback
+            function( err ) {
+                console.log( 'An error happened' );
+            });
+    };
      
 } 
 
@@ -1050,9 +1124,7 @@ function initConveyor(){
     loadConveyor('CNC', 'models/dae/Conveyor/forder.dae');
     function loadConveyor(name, path){
         var colladaLoader = new THREE.ColladaLoader(manager);
-        var textureLoader = new THREE.TextureLoader(manager);
         var dae;
-        var oldMat = new THREE.MeshPhongMaterial() ;
         colladaLoader.load(path, function(collada){
             dae = collada.scene;
             dae.traverse( function ( node ) {
@@ -1224,9 +1296,9 @@ function menu(){
             tooltip.visible = false;
             tooltip2.visible = false;
 
-            robo[0].visible = false;
-            robo[1].visible = false;
-            robo[2].visible = false;
+            for (var i = 0; i <= robo.length -1 ; i++){
+                robo[i].visible = false;
+            }
 
             workpiece[0].visible = false;
             workpiece[1].visible = false;
@@ -1247,9 +1319,9 @@ function menu(){
             
             controller1.paintOff();
 
-            robo[0].visible = false;
-            robo[1].visible = false;
-            robo[2].visible = false;
+            for (var i = 0; i <= robo.length -1 ; i++){
+                robo[i].visible = false;
+            }
 
             workpiece[0].visible = false;
             workpiece[1].visible = false;
@@ -1266,18 +1338,21 @@ function menu(){
             tooltip.visible = true;
             tooltip2.visible = true;
 
-            robo[0].visible = true;
-            robo[1].visible = true;
-            robo[2].visible = true;
+            for (var i = 0; i <= robo.length -1 ; i++){
+                robo[i].visible = true;
+                robo[i].position.set(roundPositions[i].position.x, roundPositions[i].position.y, roundPositions[i].position.z);
+
+                if ( i === 1){
+                    robo[i].scale.set(0.10 * robo[i].scale.x, 0.1 * robo[i].scale.y, 0.1 * robo[i].scale.z);
+                } else {
+                    robo[i].scale.set(0.05 * robo[i].scale.x, 0.05 * robo[i].scale.y, 0.05 * robo[i].scale.z);
+                }
+            }
 
             CNC[0].visible = false;
             workpiece[0].visible = false;
             workpiece[1].visible = false;
         
-            robo[1].position.set(roundPositions[0].position.x, roundPositions[0].position.y, roundPositions[0].position.z);
-            robo[1].scale.set(0.05, 0.05, 0.05);
-            robo[2].position.set(roundPositions[2].position.x, roundPositions[2].position.y, roundPositions[2].position.z);
-            robo[2].scale.set(0.05, 0.05, 0.05);
 
         
             
@@ -1288,9 +1363,9 @@ function menu(){
             menuLevel[1].visible = false;
             menuLevel[2].visible = true;
 
-            robo[0].visible = false;
-            robo[1].visible = false;
-            robo[2].visible = false;
+            for (var i = 0; i <= robo.length -1 ; i++){
+                robo[i].visible = false;
+            }
 
             CNC[0].visible = true;
             workpiece[0].visible = false;
@@ -1301,9 +1376,9 @@ function menu(){
             break;
 
         case 4:
-            robo[0].visible = false;
-            robo[1].visible = false;
-            robo[2].visible = false;
+            for (var i = 0; i <= robo.length -1 ; i++){
+                robo[i].visible = false;
+            }
 
             CNC[0].visible = false;
 
@@ -1315,9 +1390,9 @@ function menu(){
             break;
 
         case 5:
-            robo[0].visible = false;
-            robo[1].visible = false;
-            robo[2].visible = false;
+            for (var i = 0; i <= robo.length -1 ; i++){
+                robo[i].visible = false;
+            }
 
             CNC[0].visible = false;
 
@@ -1771,7 +1846,115 @@ function menu(){
         arrow.name = 'next'
         arrow.position.set(0.20, 0 , -0.05);
         menuLevel[2].add(arrow); */
-
-
-
     }
+
+    function getDistance(mesh1, mesh2) { 
+        var dx = mesh1.position.x - mesh2.position.x; 
+        var dy = mesh1.position.y - mesh2.position.y; 
+        var dz = mesh1.position.z - mesh2.position.z; 
+        return sqrt(dx*dx+dy*dy+dz*dz); 
+      }
+      
+    
+
+
+
+function scaling(obj, axis){
+    var max = 0;
+    var factor = 0;
+    if (axis === 'y'){
+        for (var i = 0; i <= obj.geometry.vertices.length -1 ; i++){   
+            if (max < obj.geometry.vertices[i].y){
+                max = obj.geometry.vertices[i].y;
+            }
+        }
+        factor = 1/ max;
+        if ( obj.factor === undefined){
+            obj.factor = factor;
+        }
+        return obj.scale.set(factor, factor, factor);
+    } else if (axis === 'z'){
+        for (var i = 0; i <= obj.geometry.vertices.length -1 ; i++){   
+            if (max < obj.geometry.vertices[i].z){
+                max = obj.geometry.vertices[i].z;
+            }
+        }
+        factor = 1/ max;
+        if ( obj.factor === undefined){
+            obj.factor = factor;
+        }
+        return obj.scale.set(factor, factor, factor);
+    }
+   
+    
+}
+
+/*
+function loadTest3(){
+    var objLoader = new THREE.OBJLoader(manager);
+    var mtlLoader = new THREE.MTLLoader(manager);
+   // mtlLoader.setTexturePath('models/obj/robo/')
+    mtlLoader.load('models/obj/robo/ur3.mtl', function(materials){
+        materials.isMultiMaterial = true;
+        materials.preload();
+        objLoader.setMaterials(materials);  
+        objLoader.load('models/obj/robo/ur3.obj', function(obj){
+            obj.traverse( function ( node ) {
+
+            if ( node instanceof THREE.LineSegments){
+                node.castShadow = true;
+                node.material.wireframe = false;
+                node.material.linecap = 'round';
+                node.material.linejoin = 'round';
+                node.material.linewidth = 2;
+            } 
+            obj.position.set(0.5, 0, -3.8);
+        });
+
+            obj.scale.set(0.001369, 0.001369, 0.001369);
+            scene.add(obj);
+            
+        },
+    function ( xhr ) {
+
+    console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+
+    },
+    // called when loading has errors
+    function ( error ) {
+
+    console.log( 'An error happened' )
+    })
+    })
+    
+} */
+
+/*function loadTest(){
+        var colladaLoader = new THREE.ColladaLoader(manager);
+        var dae;
+        colladaLoader.load('models/dae/robo/ur3.dae', function(collada){
+            dae = collada.scene;
+            /*dae.traverse( function ( node ) {
+                if ( node instanceof THREE.Mesh){
+                    //oldMat.color = node.material.color
+                    //node.material = oldMat;
+                    node.castShadow = true;
+                    node.material.flatShading = true;
+                    
+                } 
+            }); 
+
+
+            
+            scene.add(dae);
+            dae.scale.set(0.001 , 0.001, 0.001);
+            dae.position.set(0, 1, -0.5);
+        },
+        function ( xhr ) {
+        console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+        },
+
+        function ( error ) {
+        console.log( 'An error happened' )
+        })
+    } */

@@ -1,0 +1,13 @@
+﻿"Symbol";"Value";"Unit";
+"TraceParts.PartNumber";"10-06032017-106400";"";
+"REFERENCE";"UR3";"";
+"TraceParts.PartTitle";"UR3-Roboter";"";
+"TraceParts.InstanceId";"10-06032017-106400EOWXL7NU5LZ3A6E6G6OT8WA6Q";"";
+"DESIGN";"UR3-Roboter";"";
+"TraceParts.PartStatus";"Published";"";
+"TraceParts.PartStatusId";"";"";
+"SUPPLIER";"Universal Robots A/S";"";
+"TraceParts.PartVersion";"1.0.0";"";
+"TRACEPARTS";"TRACEPARTS";"";
+"TraceParts.PartLanguage";"de";"";
+"TraceParts.ClassPath";"UNIVERSAL_ROBOTS:/F_UNIVERSAL_ROBOTS/10-06032017-106400";"";

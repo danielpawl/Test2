@@ -1,0 +1,41 @@
+function loadRobo(name, path){
+        var colladaLoader = new THREE.ColladaLoader(manager);
+        var textureLoader = new THREE.TextureLoader(manager);
+        var dae;
+        var oldMat = new THREE.MeshPhongMaterial() ;
+        colladaLoader.load(path, function(collada){
+            dae = collada.scene;
+            dae.traverse( function ( node ) {
+                if ( node instanceof THREE.Mesh){
+                    //oldMat.color = node.material.color
+                    //node.material = oldMat;
+                    node.castShadow = true;
+                    node.material.flatShading = true;
+                    
+                } 
+            }); 
+
+
+            
+            scene.add(dae);
+            controller1.add(dae);
+            dae.scale.set(0.15 , 0.15, 0.15);
+            
+            dae.position.set(0, -0.015, -0.045);
+            dae.rotateX(-60* Math.PI/180);
+            robo[roboCounter] = dae;
+            robo[roboCounter].visible = false;
+            robo[roboCounter].name = name;
+            roboCounter++;
+
+
+
+        },
+        function ( xhr ) {
+        console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+        },
+
+        function ( error ) {
+        console.log( 'An error happened' )
+        })
+    }
