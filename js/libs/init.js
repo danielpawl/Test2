@@ -1002,13 +1002,10 @@ function initRobo(){
                     material[i].morphTargets = true;
                 }
                 
-    
                 var materials = new THREE.MeshFaceMaterial(material );
                 object = new THREE.Mesh(geometry, materials);
-                
-                
-    
                 scene.add( object);
+
                 if ( axis === 'y'){
                     scaling(object, axis);
                     object.scale.set(height * object.factor, height * object.factor, height * object.factor);
@@ -1026,8 +1023,6 @@ function initRobo(){
                 robo[roboCounter].name = name;
                 roboCounter++;
                 
-                
-    
                 robotest = object;
             },
     

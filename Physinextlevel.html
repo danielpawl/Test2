@@ -91,7 +91,7 @@
 	var bar = [];
 	var windows = [];
 	var houseGroup = new THREE.Group();
-	
+	var mesh;
 	
 	var me, playerGeo, playerMat;
 	var texture;
@@ -684,6 +684,10 @@
 		cube.castShadow = true;
 		//hitObj.push(cube);
 		hitObj.push(houseGroup);
+
+
+
+		
 		
 		//Flashlight - flash = object, flashsource = lightsource
 		flashlight(); //creates Flashlight "flash"
@@ -711,6 +715,8 @@
 		footstepsgrass();
 		//clownlaugh();
 		//bennyhill()
+		loadRobo();
+		loadRobo2();
 		
 
 		
@@ -1172,8 +1178,85 @@
 			
 			});
 		}
+	function loadRobo(){
+		var loader = new THREE.JSONLoader();
 
+		// load a resource
+		loader.load(
+			// resource URL
+			'models/js/robo/ur3.js',
 
+			// onLoad callback
+			function ( geometry, material ) {
+				for ( var i = 0; i <= material.length -1; i++){
+                    material[i].morphTargets = true;
+                }
+                
+                var materials = new THREE.MeshFaceMaterial(material );
+				object = new THREE.Mesh(geometry, materials);
+				object.scale.set(0.01 , 0.01, 0.01);
+				object.position.set(0 , 0, 250);
+                scene.add( object);
+			},
+
+			// onProgress callback
+			function ( xhr ) {
+				console.log( (xhr.loaded / xhr.total * 100) + '% loaded JSON' );
+			},
+
+			// onError callback
+			function( err ) {
+				console.log( 'An error happened' );
+			}
+		);
+	}
+
+	function loadRobo2(){
+		var loader = new THREE.JSONLoader();
+
+		// load a resource
+		loader.load(
+			// resource URL
+			'models/js/robo/ur3.js',
+
+			// onLoad callback
+			function ( geometry, material ) {
+				for ( var i = 0; i <= material.length -1; i++){
+                    material[i].morphTargets = true;
+                }
+                
+                var materials = new THREE.MeshFaceMaterial(material );
+				object = new THREE.Mesh(geometry, materials);
+				swaperino(object);
+				object.scale.set(0.01 , 0.01, 0.01);
+				object.position.set(10 , 5, 250);
+				object.rotateX(-90 * Math.PI /180);
+				
+				scene.add( object);
+				
+				mesh = object;
+			},
+
+			// onProgress callback
+			function ( xhr ) {
+				console.log( (xhr.loaded / xhr.total * 100) + '% loaded JSON' );
+			},
+
+			// onError callback
+			function( err ) {
+				console.log( 'An error happened' );
+			}
+		);
+	}
+	
+	function swaperino(obj){
+		var a;
+		for (var i = 0; i <= obj.geometry.vertices.length -1; i++ ){
+			a = obj.geometry.vertices[i].y;
+			obj.geometry.vertices[i].y = obj.geometry.vertices[i].z;
+			obj.geometry.vertices[i].z = a;
+		}
+	}
 
 	window.onload = init;
 	
