@@ -10,6 +10,9 @@ var intersected = [];
 var lastIntersected;
 var arrow;
 
+var input;
+var gui;
+
 var robotest;
 
 
@@ -105,7 +108,7 @@ function init(){
 
     //______________________________ Basic Setup ___________________________________________________________
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x000000); //0xd8d3cb
+        scene.background = new THREE.Color(0x80d4ff); //0xd8d3cb
 
         renderer = new THREE.WebGLRenderer({antialias:true});
         renderer.setPixelRatio(window.devicePixelRatio);
@@ -126,32 +129,11 @@ function init(){
 
         clock = new THREE.Clock(); 
 
-        var loader = new THREE.TextureLoader();
-        var floorGeo = new THREE.PlaneBufferGeometry(200, 200, 20, 20);
-        var floorMat = new THREE.MeshStandardMaterial({
-            map: loader.load('images/textures/floor/floor1.jpg', function(map){
-                map.wrapS = THREE.RepeatWrapping;
-                map.wrapT = THREE.RepeatWrapping;
-                map.anisotropy = 4;
-                map.repeat.set( 600, 600 )
-            }),
-            color: 0x222222,
-            roughness: 0.5,
-            metalness: 1.0
-        });
-        floor = new THREE.Mesh(floorGeo, floorMat);
-        floor.position.set(0,0,0);
-        floor.rotateX(-90* Math.PI/180);
-        floor.receiveShadow = true;
-        floor.name = 'floor';
-        
+       
 
-        rayGroup.push(floor);
-        scene.add(floor);
-
-        var hemi =  new THREE.HemisphereLight( 0x888877, 0x777788 );
+        var hemi =  new THREE.HemisphereLight( 0x888877, 0x777788, 0.5 );
         hemi.position.set(0, 10, 0);
-        scene.add(hemi );
+       scene.add(hemi ); 
 
         var pointLight = [];
 
@@ -159,18 +141,10 @@ function init(){
         var x = -100;
         var z = -100;
 
-        /*for (var i = 0; i <= 7; i++){
-            pointLight[i] = new THREE.PointLight(0xffffff, 1, 0, 2);
-            pointLight[i].position.set(x , 1000, z);
-            x += 100;
-            if( x >= 100){
-                x = -100;
-                z += 100;
-            }
-            scene.add(pointLight[i]);
-        } */
+       // scene.add(new THREE.AmbientLight(0x404040, 0.3));
+       // scene.add(new THREE.HemisphereLight(0x909090, 0x404040));
 
-        pointLight[0] = new THREE.PointLight(0xffffff, 1, 300, 2);
+      /*  pointLight[0] = new THREE.PointLight(0xffffff, 1, 300, 2);
         pointLight[0].position.set(-100 , 100, 0);
         pointLight[1] = new THREE.PointLight(0xffffff, 1, 300, 2);
         pointLight[1].position.set(100 , 100, 0);
@@ -178,11 +152,11 @@ function init(){
         pointLight[2].position.set(0 , 100, 100);
         pointLight[3] = new THREE.PointLight(0xffffff, 1, 300, 2);
         pointLight[3].position.set(0, 100, -100);
-        scene.add(pointLight[0], pointLight[1], pointLight[2], pointLight[3],)
+        scene.add(pointLight[0], pointLight[1], pointLight[2], pointLight[3],) */
       
         
        
-        var point = new THREE.DirectionalLight(0xffffff, 0.5);
+       var point = new THREE.DirectionalLight(0xffffff, 0.5);
         point.castShadow = true;
         point.shadow.camera.top = 2;
         point.shadow.camera.bottom = -2;
@@ -192,9 +166,9 @@ function init(){
         point.shadow.mapSize.set( 4096, 4096 );
         point.shadow.bias = -0.0001;
         scene.add(point);
-        point.position.set(0, 10, 0);
+        point.position.set(0, 100, 0);
         
-
+        /*
         var cubeGeo = new THREE.BoxBufferGeometry(2,2,2);
         var cubeMat = new THREE.MeshStandardMaterial({
             color: 0x00ff00,
@@ -206,9 +180,9 @@ function init(){
         cube.receiveShadow = true;
         scene.add(cube);
 
-        rayGroup.push(cube);
+        rayGroup.push(cube); */
 
-
+        initFactory();
         excludeGroup.push('floor', 'frame');
     
        
@@ -224,13 +198,13 @@ function init(){
         controller1.standingMatrix = renderer.vr.getStandingMatrix();
         controller1.userData.points = [ new THREE.Vector3(), new THREE.Vector3() ];
 		controller1.userData.matrices = [ new THREE.Matrix4(), new THREE.Matrix4() ];
-        scene.add(controller1);
+        dollyCam.add(controller1);
 
         controller2 = new THREE.ViveController(1);
         controller2.standingMatrix = renderer.vr.getStandingMatrix();
         controller2.userData.points = [ new THREE.Vector3(), new THREE.Vector3() ];
 		controller2.userData.matrices = [ new THREE.Matrix4(), new THREE.Matrix4() ];
-        scene.add(controller2);
+        dollyCam.add(controller2);
 
 
         loadController();
@@ -261,6 +235,13 @@ function init(){
     createTracker();
     initGeometry();
     initMenu();
+
+    //===================== DAT GUI =======================================================
+   
+    input = dat.GUIVR.addInputObject(controller2);
+    scene.add(input);
+
+    
 
 
     
@@ -312,6 +293,7 @@ function render(){
 function loadController() {
 
     var loader = new THREE.OBJLoader();
+    var gltfLoader = new THREE.GLTFLoader();
     loader.setPath('models/obj/vive-controller/');
     loader.load('vr_controller_vive_1_5.obj', function(object) {
             object.name = 'Controller1';
@@ -332,7 +314,17 @@ function loadController() {
         controller.material.specularMap = loader.load('onepointfive_spec.png');
         controller.castShadow = true;
         controller2.add(object.clone());
-    });
+    }); 
+    /* gltfLoader.load('models/gltf/controller1/scene.gltf', 
+				function(gltf){
+					gltf.scene.traverse(function(node){
+						if(node instanceof THREE.Mesh){
+							node.castShadow = true;
+						}
+					});
+                    controller2.add(gltf.scene);
+                    controller2.scale.set(0.01, 0.01, 0.01);
+                }); */
 
 
         controller1.name = 'Controller1';
@@ -359,25 +351,8 @@ function onTriggerDown1(){
         if(firstTimePressed == false){
             firstTimePressed = true;
         } 
-        /*
-        if (robo[0].visible === true){
-            robo[0].visible = false;
-            robo[1].visible = true;
-        } else if(robo[1].visible === true){
-            robo[1].visible = false;
-            robo[2].visible = true;
-        } else if(robo[2].visible === true){
-            robo[2].visible = false;
-            robo[0].visible = true;
-        }*/
 
-        controller1.setVibe('bam').set(0.4).wait(30).set(0.1).wait(30).set(0);
-       
-            
-     
-
-
-    
+        controller1.setVibe('bam').set(0.4).wait(30).set(0.1).wait(30).set(0); 
 }
 
 function onTriggerUp1(){
@@ -542,10 +517,12 @@ controller2.addEventListener('menudown', onMenuDown2);
 controller2.addEventListener('menuup', onMenuUp2);
 
 function onTriggerDown2(){
+    input.pressed(true);
     handleIntersections();
 }
 
 function onTriggerUp2(){
+    input.pressed(false);
     toggleTrigger2 = true;
 }
 
@@ -554,7 +531,17 @@ function onAxisChanged2(){
 }
 
 function onThumbpadDown2(){
+    var intersections = getIntersections(controller2);
+    if (intersections.length > 0) {
+        var intersection = intersections[0];
+        var object = intersection.object;
+        var point = intersection.point;
 
+        if (object.name === "floor"){
+            teleport(point);
+            return;
+        }
+    }
 }
 
 function onThumbpadUp2(){
@@ -758,6 +745,12 @@ function handleIntersections(){
                 positioningModeOn = true;
                 toggleTrigger2 = false;
                 return;
+            } else if (object.name === 'box1'){
+                if (!gui.visible){
+                    gui.visible = true;
+                } else {
+                    gui.visible = false;
+                }
             }
         }
 	
@@ -788,6 +781,7 @@ function positioningMode(){
             
             if (object.name === 'floor'){
                 copyObj.position.set(position.x, position.y, position.z);
+                //copyObj.up.set(0,1,0);
             }
             
             if( controller2.getButtonState( 'trigger') === true && toggleTrigger2 === true ){
@@ -814,8 +808,13 @@ function positioningMode(){
                     createdCNCCounter++;
                     alreadyCopied = false;
                 } else if ( menuStep === 4){
-                    createdWorkpiece[createdWorkpieceCounter] = copyObj;
+                    createdWorkpiece[createdWorkpieceCounter] = copyObj.clone();
+                   
                     //createdWorkpiece[createdWorkpieceCounter].position.y +=copyObj.geometry.parameters.height;
+                    
+                    createGUI(createdWorkpiece[createdWorkpieceCounter]);
+                    createdWorkpiece[createdWorkpieceCounter].name = 'box1';
+                    rayGroup.push(createdWorkpiece[createdWorkpieceCounter]);
                     createdWorkpieceCounter++;
                     alreadyCopied = false;
                 } else if ( menuStep === 5){
@@ -832,6 +831,18 @@ function positioningMode(){
     
 }
 
+function createGUI(obj){
+    gui = dat.GUIVR.create('Position');
+    gui.add(obj.position, 'x').min(0).max(10).step(0.25);
+    gui.add(obj.position, 'y').min(0).max(10).step(0.25);
+    gui.add(obj.position, 'z').min(0).max(10).step(0.25);
+
+    gui.scale.set(0.2, 0.2, 0.2);
+    gui.position.set(-0.1, 0.1, 0);
+    gui.rotateX(-60 * Math.PI / 180);
+    gui.visible = false;
+    controller1.add(gui);
+}
 
 
 function switchPick(){
@@ -984,9 +995,6 @@ function initRobo(){
     loadRobo('TX200', 'models/js/robo/tx200.js', 2, 'z');
     loadRobo('Ts80','models/js/robo/ts80.js', 2, 'z' );
         
-            //robo[roboCounter].visible = false;
-            
-            
 
     function loadRobo(name, path, height, axis){
         var loader = new THREE.JSONLoader(manager);
@@ -1044,23 +1052,17 @@ function initCNC(){
     loadCNC('CNC', 'models/dae/CNC/CNC.dae');
     function loadCNC(name, path){
         var colladaLoader = new THREE.ColladaLoader(manager);
-        var textureLoader = new THREE.TextureLoader(manager);
         var dae;
-        var oldMat = new THREE.MeshPhongMaterial() ;
         colladaLoader.load(path, function(collada){
             dae = collada.scene;
             dae.traverse( function ( node ) {
                 if ( node instanceof THREE.Mesh){
-                    //oldMat.color = node.material.color
-                    //node.material = oldMat;
                     node.castShadow = true;
                     node.material.flatShading = true;
                     
                 } 
             }); 
 
-
-            
             scene.add(dae);
             controller1.add(dae);
             dae.scale.set(0.05 , 0.05, 0.05);
@@ -1105,6 +1107,11 @@ function initWorkpiece(){
     workpiece[0].rotateX(-60 * Math.PI / 180);
     workpiece[0].visible = false;
 
+   
+
+
+    
+
 
     var geometry = new THREE.SphereBufferGeometry(0.5, 32, 32);
     workpiece [1] = new THREE.Mesh(geometry, material);
@@ -1131,9 +1138,7 @@ function initConveyor(){
                     
                 } 
             }); 
-
-
-            
+           
             scene.add(dae);
             controller1.add(dae);
             dae.scale.set(0.05 , 0.05, 0.05);
@@ -1157,6 +1162,111 @@ function initConveyor(){
         })
     }
 
+}
+
+//========================== Envorinment ================================================================
+
+function initFactory(){
+    var loader = new THREE.TextureLoader();
+    var floorGeo = new THREE.PlaneBufferGeometry(50, 50);
+    var floorMat = new THREE.MeshStandardMaterial({
+        map: loader.load('images/textures/floor/Metal_Plate_002_COLOR.jpg', function(map){
+            map.wrapS = THREE.RepeatWrapping;
+            map.wrapT = THREE.RepeatWrapping;
+            map.repeat.set( 256, 256 )
+        }),
+
+        normalMap: loader.load('images/textures/floor/Metal_Plate_002_NORM.jpg', function(map){
+            map.wrapS = THREE.RepeatWrapping;
+            map.wrapT = THREE.RepeatWrapping;
+            map.repeat.set( 256, 256 )
+        }), 
+        //normalScale: new THREE.Vector2( 0.1, 0.1),
+
+        roughness: loader.load('images/textures/floor/Metal_Plate_002_ROUGH.jpg', function(map){
+            map.wrapS = THREE.RepeatWrapping;
+            map.wrapT = THREE.RepeatWrapping;
+            map.repeat.set( 256, 256 )
+        }),
+    });
+    floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.position.set(0,0,0);
+    floor.rotateX(-90* Math.PI/180);
+    floor.receiveShadow = true;
+    floor.name = 'floor';
+    
+
+    rayGroup.push(floor);
+    scene.add(floor);
+
+    var shape = new THREE.Shape();
+    shape.moveTo(floorGeo.parameters.width/2 , 0);
+    shape.lineTo(floorGeo.parameters.width/2, 10);
+    shape.lineTo(-floorGeo.parameters.width/2, 10);
+    shape.lineTo(-floorGeo.parameters.width/2, 0);
+
+    var extrudeSettings = {bevelEnabled: false, depth: 0.01};
+    var geometry = new THREE.ExtrudeBufferGeometry(shape, extrudeSettings);
+    var material = new THREE.MeshBasicMaterial({
+        side: THREE.DoubleSide,
+        map: loader.load('images/textures/plaster/Plaster_001_COLOR.jpg', function(map){
+            map.wrapS = THREE.RepeatWrapping;
+            map.wrapT = THREE.RepeatWrapping;
+            map.anisotropy = 4;
+            map.repeat.set( 1 , 1 )
+        }),
+        aoMap: loader.load('images/textures/plaster/Plaster_001_OCC.jpg', function(map){
+            map.wrapS = THREE.RepeatWrapping;
+            map.wrapT = THREE.RepeatWrapping;
+            map.anisotropy = 4;
+            map.repeat.set( 1 , 1 )
+        }),
+        displacementMap: loader.load('images/textures/plaster/Plaster_001_DISP.png', function(map){
+            map.wrapS = THREE.RepeatWrapping;
+            map.wrapT = THREE.RepeatWrapping;
+            map.anisotropy = 4;
+            map.repeat.set(1 , 1  )
+        }),
+        normalMap: loader.load('images/textures/plaster/Plaster_001_NORM.jpg', function(map){
+            map.wrapS = THREE.RepeatWrapping;
+            map.wrapT = THREE.RepeatWrapping;
+            map.anisotropy = 4;
+            map.repeat.set( 1 , 1)
+        }),
+        roughnessMap: loader.load('images/textures/plaster/Plaster_001_ROUGH.jpg', function(map){
+            map.wrapS = THREE.RepeatWrapping;
+            map.wrapT = THREE.RepeatWrapping;
+            map.anisotropy = 4;
+            map.repeat.set( 1 , 1)
+        }),
+        color: 0xcccccc
+    });
+    var wall = new THREE.Mesh(geometry, material);
+    wall.receiveShadow = true;
+    wall.castShadow = true;
+    var copyWall1 = wall.clone();
+    var copyWall2 = wall.clone();
+    var copyWall3 = wall.clone();
+
+    wall.position.set(0, 0, -floorGeo.parameters.width/2);
+    copyWall1.position.set(0, 0, floorGeo.parameters.width/2);
+    copyWall2.position.set(-floorGeo.parameters.width/2,0, 0);
+    copyWall2.rotateY(-90 * Math.PI /180);
+    copyWall3.position.set(floorGeo.parameters.width/2,0, 0);
+    copyWall3.rotateY(-90 * Math.PI /180);
+
+    scene.add(wall, copyWall1, copyWall2 , copyWall3);
+
+    var material = new THREE.MeshStandardMaterial({
+        side: THREE.DoubleSide,
+        color: 0xccffff,
+        transparent: true,
+        opacity: 0.5
+    })
+    var ceiling = new THREE.Mesh(floorGeo, material);
+    ceiling.rotateX(-90 * Math.PI / 180);
+    ceiling.position.set(0, 10, 0);
+    scene.add(ceiling);
 }
 //========================== Window for buttons ==========================================================
 
@@ -1880,8 +1990,16 @@ function scaling(obj, axis){
         }
         return obj.scale.set(factor, factor, factor);
     }
-   
-    
+}
+
+function teleport(point) {
+
+	var newPos = THREE.Vector3(0, 0, 0);
+	
+	newPos = point; 													// target point = new destination
+	newPos.y = 0;														// not to end in the Floor if s.th. went wrong
+	dollyCam.position.set(newPos.x, newPos.y, newPos.z);				// moves scene instead of Camera
+	
 }
 
 /*
