@@ -11,7 +11,9 @@ var lastIntersected;
 var arrow;
 
 var input;
-var gui;
+
+var workpieceGUI = [];
+var roboGUI = [];
 
 var robotest;
 
@@ -131,9 +133,9 @@ function init(){
 
        
 
-        var hemi =  new THREE.HemisphereLight( 0x888877, 0x777788, 0.5 );
-        hemi.position.set(0, 10, 0);
-       scene.add(hemi ); 
+        //var hemi =  new THREE.HemisphereLight( 0x888877, 0x777788, 0.5 );
+        //hemi.position.set(0, 10, 0);
+        //scene.add(hemi ); 
 
         var pointLight = [];
 
@@ -141,12 +143,12 @@ function init(){
         var x = -100;
         var z = -100;
 
-       // scene.add(new THREE.AmbientLight(0x404040, 0.3));
-       // scene.add(new THREE.HemisphereLight(0x909090, 0x404040));
+        scene.add(new THREE.AmbientLight(0x404040, 0.3));
+        scene.add(new THREE.HemisphereLight(0x909090, 0x404040));
 
-      /*  pointLight[0] = new THREE.PointLight(0xffffff, 1, 300, 2);
-        pointLight[0].position.set(-100 , 100, 0);
-        pointLight[1] = new THREE.PointLight(0xffffff, 1, 300, 2);
+        pointLight[0] = new THREE.PointLight(0xffffff, 1, 15, 2);
+        pointLight[0].position.set(-15 , 10, 0);
+       /*pointLight[1] = new THREE.PointLight(0xffffff, 1, 300, 2);
         pointLight[1].position.set(100 , 100, 0);
         pointLight[2] = new THREE.PointLight(0xffffff, 1, 300, 2);
         pointLight[2].position.set(0 , 100, 100);
@@ -168,19 +170,20 @@ function init(){
         scene.add(point);
         point.position.set(0, 100, 0);
         
-        /*
+        
         var cubeGeo = new THREE.BoxBufferGeometry(2,2,2);
         var cubeMat = new THREE.MeshStandardMaterial({
             color: 0x00ff00,
             roughness: 0
         });
         cube = new THREE.Mesh(cubeGeo, cubeMat);
-        cube.position.set(camera.position.x, camera.position.y, camera.position.z -5);
+        cube.position.set(camera.position.x, 1, camera.position.z -5);
         cube.castShadow = true;
         cube.receiveShadow = true;
         scene.add(cube);
+        cube.scale.z = 1.5;
 
-        rayGroup.push(cube); */
+        rayGroup.push(cube); 
 
         initFactory();
         excludeGroup.push('floor', 'frame');
@@ -259,16 +262,14 @@ function render(){
     renderer.setAnimationLoop(render);
     renderer.render(scene, camera);
     
-    if(dragCube == true){
-        cube.position.y += 0.05;
-    }
+    
     if(clock.getElapsedTime() >= 30 || firstTimePressed === true){
         controller1.remove(tutorialWindows);
     };
     
     intersectObjects(controller2);
     //cleanIntersected();
-    if(clock.getElapsedTime() >= 2){
+    if(clock.getElapsedTime() >= 5){
         for (var i = 0; i <= robo.length -1 ; i++){
             if (robo[i] !== undefined){
               // robo[i].rotation.y += 0.01;
@@ -351,7 +352,9 @@ function onTriggerDown1(){
         if(firstTimePressed == false){
             firstTimePressed = true;
         } 
-
+        if (createdWorkpiece[0] !== undefined){
+            createdWorkpiece[0].position.y += 0.01;
+        }
         controller1.setVibe('bam').set(0.4).wait(30).set(0.1).wait(30).set(0); 
 }
 
@@ -613,16 +616,23 @@ function intersectObjects(controller) {
         
         var intersection = intersections[0];
         var object = intersection.object;
-        if(object.name === 'frame') return;
+        if(object.name === 'exclude') return;
 
-        if(object.name !== 'floor' && lastIntersected !== object){
+        if(object.name !== 'floor' && lastIntersected.name !== object.name){
             controller2.setVibe('bam').set(0.05).wait(50).set(0);
             
             
         }
-        if(object.name !== 'floor' && object.name !== 'frame'){
-            object.scale.set(1.3, 1.3, 1);
-            object.material.emissive.b = 1;
+        if(object.name !== 'floor' && object.name !== 'exclude' ){
+            if (object.material.emissive !== undefined){
+                object.material.emissive.r = 100/255;
+                object.material.emissive.g = 200/255;
+            }
+            
+            if ( object.name.substring(0,3) !== 'box' && object.name.substring(0,3) !== 'rob') {
+                object.scale.set(1.3, 1.3, 1);
+            }
+            
         }
         
         
@@ -635,7 +645,7 @@ function intersectObjects(controller) {
         //symbol[l][n].children[0].material.color.setHex(0x00ffc2);
 
         //object.material.emissive.r = 1;
-        if( lastIntersected !== object && object.name !== 'floor' && object.name !== 'frame'){
+        if( lastIntersected !== object && object.name !== 'floor' && object.name !== 'exclude'){
             tooltip.remove(text);
             createText(object.name);
         } 
@@ -658,11 +668,22 @@ function cleanIntersected() {
     while (intersected.length) {
         var object = intersected.pop();
         if (lastIntersected === object) return;
-        object.scale.set(1, 1, 1);
-        object.material.emissive.b = 0;
+        if (object.material.emissive !== undefined){
+            object.material.emissive.r = 0;
+            object.material.emissive.g = 0;
+        }
+        if ( object.name.substring(0,3) !== 'box' && object.name.substring(0,3) !== 'rob') {
+            object.scale.set(1, 1, 1);
+        }
+    
         if ( lastIntersected !== undefined){
-            lastIntersected.scale.set(1, 1, 1);
-            lastIntersected.material.emissive.b = 0;
+            if (lastIntersected.material.emissive !== undefined){
+                lastIntersected.material.emissive.r = 0;
+                lastIntersected.material.emissive.g = 0;
+            }
+            if ( lastIntersected.name.substring(0,3) !== 'box' && lastIntersected.name.substring(0,3) !== 'rob') {
+                lastIntersected.scale.set(1, 1, 1);
+            }
             tooltip.remove(text)
         }
         
@@ -745,12 +766,46 @@ function handleIntersections(){
                 positioningModeOn = true;
                 toggleTrigger2 = false;
                 return;
-            } else if (object.name === 'box1'){
-                if (!gui.visible){
-                    gui.visible = true;
-                } else {
-                    gui.visible = false;
+            } else if (object.name.substring(0, 3) === 'box'){
+                for(var i = 0; i <= createdWorkpiece.length -1 ; i++){
+                    if (object.name === 'box' + i.toString()){
+                        if (!workpieceGUI[i].visible){
+                            workpieceGUI[i].visible = true;
+                            workpieceGUI[i].position.y = 0.1;
+                            prevLevel = menuStep;
+                            menuStep = 0;
+                            menu();
+                        } else {
+                            workpieceGUI[i].visible = false;
+                            workpieceGUI[i].position.y = -100;
+                            menuStep = prevLevel;
+                            menu();
+        
+                        }
+                    }
+                    
                 }
+                
+            } else if (object.name.substring(0, 4) === 'robo'){
+                for(var i = 0; i <= createdRobo.length -1 ; i++){
+                    if (object.name === 'robo' + i.toString()){
+                        if (!roboGUI[i].visible){
+                            roboGUI[i].visible = true;
+                            roboGUI[i].position.y = 0.1;
+                            prevLevel = menuStep;
+                            menuStep = 0;
+                            menu();
+                        } else {
+                            roboGUI[i].visible = false;
+                            roboGUI[i].position.y = -100;
+                            menuStep = prevLevel;
+                            menu();
+        
+                        }
+                    }
+                    
+                }
+                
             }
         }
 	
@@ -774,7 +829,7 @@ function positioningMode(){
                     copyObj.scale.set(1 , 1 , 1 );
                 }
                 
-                copyObj.lookAt(0, 1, 0);
+                copyObj.lookAt(0, 0, 1);
                 scene.add(copyObj);
                 alreadyCopied = true;
             }
@@ -801,6 +856,9 @@ function positioningMode(){
                 controller2.remove(pickObj);
                 if (menuStep === 2){
                     createdRobo[createdRoboCounter] = copyObj;
+                    createdRobo[createdRoboCounter].name = 'robo' + createdRoboCounter.toString();
+                    createGUI(createdRobo[createdRoboCounter]);
+                    rayGroup.push( createdRobo[createdRoboCounter]);
                     createdRoboCounter++;
                     alreadyCopied = false;
                 } else if ( menuStep === 3){
@@ -808,12 +866,10 @@ function positioningMode(){
                     createdCNCCounter++;
                     alreadyCopied = false;
                 } else if ( menuStep === 4){
-                    createdWorkpiece[createdWorkpieceCounter] = copyObj.clone();
-                   
-                    //createdWorkpiece[createdWorkpieceCounter].position.y +=copyObj.geometry.parameters.height;
+                    createdWorkpiece[createdWorkpieceCounter] = copyObj;
+                    createdWorkpiece[createdWorkpieceCounter].name = 'box' + createdWorkpieceCounter.toString();
                     
                     createGUI(createdWorkpiece[createdWorkpieceCounter]);
-                    createdWorkpiece[createdWorkpieceCounter].name = 'box1';
                     rayGroup.push(createdWorkpiece[createdWorkpieceCounter]);
                     createdWorkpieceCounter++;
                     alreadyCopied = false;
@@ -832,16 +888,55 @@ function positioningMode(){
 }
 
 function createGUI(obj){
-    gui = dat.GUIVR.create('Position');
-    gui.add(obj.position, 'x').min(0).max(10).step(0.25);
-    gui.add(obj.position, 'y').min(0).max(10).step(0.25);
-    gui.add(obj.position, 'z').min(0).max(10).step(0.25);
+    if( menuStep === 2){
+        roboGUI[createdRoboCounter] = dat.GUIVR.create(obj.name);
+        roboGUI[createdRoboCounter].add(obj.position, 'x', -floor.geometry.parameters.width/2,  floor.geometry.parameters.width/2).step(0.25).name('Position x').listen();
+        roboGUI[createdRoboCounter].add(obj.position, 'y', 0, 10).step(0.25).name('Position y').listen();
+        roboGUI[createdRoboCounter].add(obj.position, 'z', -floor.geometry.parameters.height/2,  floor.geometry.parameters.height/2).step(0.25).name('Position z').listen();
+        roboGUI[createdRoboCounter].add(obj.rotation, 'x', 0 , 2* Math.PI).name('Rotation x');
+        roboGUI[createdRoboCounter].add(obj.rotation, 'y', 0 , 2* Math.PI).name('Rotation y');
+        roboGUI[createdRoboCounter].add(obj.rotation, 'z', 0 , 2* Math.PI).name('Rotation z');
+        
 
-    gui.scale.set(0.2, 0.2, 0.2);
-    gui.position.set(-0.1, 0.1, 0);
-    gui.rotateX(-60 * Math.PI / 180);
-    gui.visible = false;
-    controller1.add(gui);
+        roboGUI[createdRoboCounter].scale.set(0.2, 0.2, 0.2);
+        roboGUI[createdRoboCounter].position.set(-0.1, -100, 0);
+        roboGUI[createdRoboCounter].rotateX(-60 * Math.PI / 180);
+        roboGUI[createdRoboCounter].visible = false;
+        controller1.add(roboGUI[createdRoboCounter]);
+        roboGUI[createdRoboCounter].name = 'exclude'
+        roboGUI[createdRoboCounter].traverse( function(child){
+            if (child instanceof THREE.Mesh){
+                child.name = 'exclude';
+            }
+        });
+        rayGroup.push(roboGUI[createdRoboCounter]);
+    }
+    if (menuStep === 4){
+        
+        workpieceGUI[createdWorkpieceCounter] = dat.GUIVR.create(obj.name);
+        workpieceGUI[createdWorkpieceCounter].add(obj.position, 'x').min(-floor.geometry.parameters.width/2).max(floor.geometry.parameters.width/2).step(0.25).name('Position x').listen();
+        workpieceGUI[createdWorkpieceCounter].add(obj.position, 'y').min(0).max(10).step(0.25).name('Position y').listen();
+        workpieceGUI[createdWorkpieceCounter].add(obj.position, 'z').min(-floor.geometry.parameters.height/2).max(floor.geometry.parameters.height/2).step(0.25).name('Position z').listen();
+        workpieceGUI[createdWorkpieceCounter].add(obj.scale, 'x', 0.1, 5).name('Scale x');
+        workpieceGUI[createdWorkpieceCounter].add(obj.scale, 'y', 0.1, 5).name('Scale y');
+        workpieceGUI[createdWorkpieceCounter].add(obj.scale, 'z', 0.1, 5).name('Scale z');
+
+        workpieceGUI[createdWorkpieceCounter].scale.set(0.2, 0.2, 0.2);
+        workpieceGUI[createdWorkpieceCounter].position.set(-0.1, -100, 0);
+        workpieceGUI[createdWorkpieceCounter].rotateX(-60 * Math.PI / 180);
+        workpieceGUI[createdWorkpieceCounter].visible = false;
+        controller1.add(workpieceGUI[createdWorkpieceCounter]);
+        workpieceGUI[createdWorkpieceCounter].name = 'exclude'
+        workpieceGUI[createdWorkpieceCounter].traverse( function(child){
+            if (child instanceof THREE.Mesh){
+                child.name = 'exclude';
+            }
+        });
+        rayGroup.push(workpieceGUI[createdWorkpieceCounter]);
+    }
+
+   
+    
 }
 
 
@@ -1205,41 +1300,40 @@ function initFactory(){
     shape.lineTo(-floorGeo.parameters.width/2, 10);
     shape.lineTo(-floorGeo.parameters.width/2, 0);
 
-    var extrudeSettings = {bevelEnabled: false, depth: 0.01};
+    var extrudeSettings = {depth: 0.01, bevelEnabled: false};
     var geometry = new THREE.ExtrudeBufferGeometry(shape, extrudeSettings);
-    var material = new THREE.MeshBasicMaterial({
+    var material = new THREE.MeshStandardMaterial({
         side: THREE.DoubleSide,
         map: loader.load('images/textures/plaster/Plaster_001_COLOR.jpg', function(map){
             map.wrapS = THREE.RepeatWrapping;
             map.wrapT = THREE.RepeatWrapping;
             map.anisotropy = 4;
-            map.repeat.set( 1 , 1 )
+            map.repeat.set( 2 , 2 )
         }),
         aoMap: loader.load('images/textures/plaster/Plaster_001_OCC.jpg', function(map){
             map.wrapS = THREE.RepeatWrapping;
             map.wrapT = THREE.RepeatWrapping;
             map.anisotropy = 4;
-            map.repeat.set( 1 , 1 )
+            map.repeat.set(2 , 2  )
         }),
         displacementMap: loader.load('images/textures/plaster/Plaster_001_DISP.png', function(map){
             map.wrapS = THREE.RepeatWrapping;
             map.wrapT = THREE.RepeatWrapping;
             map.anisotropy = 4;
-            map.repeat.set(1 , 1  )
+            map.repeat.set(2 , 2  )
         }),
         normalMap: loader.load('images/textures/plaster/Plaster_001_NORM.jpg', function(map){
             map.wrapS = THREE.RepeatWrapping;
             map.wrapT = THREE.RepeatWrapping;
             map.anisotropy = 4;
-            map.repeat.set( 1 , 1)
+            map.repeat.set( 2 , 2 )
         }),
         roughnessMap: loader.load('images/textures/plaster/Plaster_001_ROUGH.jpg', function(map){
             map.wrapS = THREE.RepeatWrapping;
             map.wrapT = THREE.RepeatWrapping;
             map.anisotropy = 4;
-            map.repeat.set( 1 , 1)
+            map.repeat.set( 2 , 2 )
         }),
-        color: 0xcccccc
     });
     var wall = new THREE.Mesh(geometry, material);
     wall.receiveShadow = true;
@@ -1407,6 +1501,7 @@ function menu(){
 
             workpiece[0].visible = false;
             workpiece[1].visible = false;
+            conveyor[0].visible = false;
 
             break;
 
@@ -1430,6 +1525,7 @@ function menu(){
 
             workpiece[0].visible = false;
             workpiece[1].visible = false;
+            conveyor[0].visible = false;
                 
             break;
 
@@ -1457,6 +1553,7 @@ function menu(){
             CNC[0].visible = false;
             workpiece[0].visible = false;
             workpiece[1].visible = false;
+            conveyor[0].visible = false;
         
 
         
@@ -1467,6 +1564,10 @@ function menu(){
         case 3:
             menuLevel[1].visible = false;
             menuLevel[2].visible = true;
+            menuLevel[3].visible = true;
+            menuLevel[4].visible = true;
+            menuLevel[5].visible = true;
+            
 
             for (var i = 0; i <= robo.length -1 ; i++){
                 robo[i].visible = false;
@@ -1475,17 +1576,24 @@ function menu(){
             CNC[0].visible = true;
             workpiece[0].visible = false;
             workpiece[1].visible = false;
+            conveyor[0].visible = false;
 
 
 
             break;
 
         case 4:
+            menuLevel[1].visible = false;
+            menuLevel[2].visible = true;
+            menuLevel[3].visible = true;
+            menuLevel[4].visible = true;
+            menuLevel[5].visible = true;
             for (var i = 0; i <= robo.length -1 ; i++){
                 robo[i].visible = false;
             }
 
             CNC[0].visible = false;
+            conveyor[0].visible = false;
 
             workpiece[0].visible = true;
             workpiece[1].visible = true;
@@ -1495,6 +1603,11 @@ function menu(){
             break;
 
         case 5:
+            menuLevel[1].visible = false;
+            menuLevel[2].visible = true;
+            menuLevel[3].visible = true;
+            menuLevel[4].visible = true;
+            menuLevel[5].visible = true;
             for (var i = 0; i <= robo.length -1 ; i++){
                 robo[i].visible = false;
             }
@@ -1841,9 +1954,9 @@ function menu(){
         var loader = new THREE.TextureLoader(manager);
         var extrudeSettings = { bevelEnabled: false, depth: depth };
 
-       
+
         var geometry = new THREE.PlaneBufferGeometry(width - (2 * frame), height - (2* frame));
-        var material = new THREE.MeshStandardMaterial({
+        var material = new THREE.MeshPhongMaterial({
             map: loader.load(path),
             side: THREE.DoubleSide,
             transparent: true
@@ -1858,8 +1971,13 @@ function menu(){
             symbol[level][symbolCounter[level]].value = symbolCounter[level];
         //}
         
-        
+        var geometry = new THREE.PlaneBufferGeometry( width, height);
+        var material = new THREE.MeshPhongMaterial({color: 0x000000, side: THREE.DoubleSide});
+        var plane = new THREE.Mesh(geometry, material);
+        plane.name = 'exclude';
 
+        symbol[level][symbolCounter[level]].add(plane);
+        plane.position.set(0, 0, -0.003);
 
         var shape = new THREE.Shape();
         shape.moveTo(0 , 0);
@@ -1878,7 +1996,7 @@ function menu(){
         var geometry = new THREE.ExtrudeBufferGeometry(shape, extrudeSettings);
         var material = new THREE.MeshBasicMaterial({color: 0xffffff, side: THREE.DoubleSide});
         var extrude = new THREE.Mesh(geometry, material);
-        extrude.name = 'frame';
+        extrude.name = 'exclude';
 
         symbol[level][symbolCounter[level]].add(extrude);
         extrude.position.set(-width/2, -height/2, -depth/2);
