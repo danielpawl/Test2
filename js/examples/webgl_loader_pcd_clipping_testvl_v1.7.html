@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - PCD</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #000000;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			#info {
+				color: #fff;
+				position: absolute;
+				top: 10px;
+				width: 100%;
+				text-align: center;
+				z-index: 100;
+				display:block;
+
+			}
+
+			a { color: #d14826 }
+			.button { background:#999; color:#eee; padding:0.2em 0.5em; cursor:pointer }
+			.highlight { background:orange; color:#fff; }
+
+			span {
+				display: inline-block;
+				width: 60px;
+				float: left;
+				text-align: center;
+			}
+
+		</style>
+	</head>
+	<body>
+		<div id="info">
+			PCD Exporter<br/>
+			<button id="export_scene">Export Scene</button>
+
+		<br/>
+
+		</div>
+
+
+		<script src="../build/three.js"></script>
+		<script src="js/loaders/PCDLoader.js"></script>
+		<script src="js/controls/TrackballControls.js"></script>
+		<script src="js/Detector.js"></script>
+		<script src="js/libs/stats.min.js"></script>
+		<script src="js/libs/dat.gui.min.js"></script>
+		<script src="js/exporters/GLTFExporter.js"></script>
+
+		<script>
+
+			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+
+
+			var container, stats;
+			var camera, controls, scene, renderer;
+
+			var params = {
+				clipIntersection: false,
+//				planeConstant: 0
+				planeConstantxmin: -5,
+				planeConstantxmax: 5,
+				planeConstantymin: -5,
+				planeConstantymax: 5,
+				planeConstantzmin: -5,
+				planeConstantzmax: 5,
+				showHelpers: false,
+				rotationX: 0,
+				rotationY: 0,
+				rotationZ: 0,
+				positionX: 0,
+				positionY: 0,
+				positionZ: 0
+		    };
+
+			var clipPlanes = [
+//				new THREE.Plane( new THREE.Vector3( -1, 0, 0 ), 0 )
+				new THREE.Plane( new THREE.Vector3( -1, 0, 0 ), -(-5) ),
+				new THREE.Plane( new THREE.Vector3( 1, 0, 0 ), 5 ),
+				new THREE.Plane( new THREE.Vector3( 0, -1, 0 ),-(- 5) ),
+				new THREE.Plane( new THREE.Vector3( 0,  1, 0 ), 5 ),
+				new THREE.Plane( new THREE.Vector3( 0, 0, - 1 ), -(-5) ),
+				new THREE.Plane( new THREE.Vector3( 0, 0, 1 ), 5 )
+			];
+
+			init();
+			animate();
+			function init() {
+
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0x000000 );
+
+				var grid = new THREE.GridHelper( 10, 50 );					//Gitter am Boden
+				scene.add( grid );
+
+				var axesHelper = new THREE.AxesHelper( 10 );
+				scene.add( axesHelper );
+
+				camera = new THREE.PerspectiveCamera( 15, window.innerWidth / window.innerHeight, 0.01, 40 );
+				camera.position.x = 0.4;
+				camera.position.z = -2;
+				camera.up.set(0,0,1);
+
+				scene.add( camera );
+
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.localClippingEnabled = true;
+				document.body.appendChild( renderer.domElement );
+
+				controls = new THREE.TrackballControls( camera, renderer.domElement  );
+
+				controls.rotateSpeed = 2.0;
+				controls.zoomSpeed = 0.3;
+				controls.panSpeed = 0.2;
+
+				controls.noZoom = false;
+				controls.noPan = false;
+
+				controls.staticMoving = true;
+				controls.dynamicDampingFactor = 0.3;
+
+				controls.minDistance = 0.3;
+				controls.maxDistance = 0.3 * 100;
+
+				var loader = new THREE.PCDLoader();
+				loader.load( './models/pcd/binary/scan.pcd', function ( mesh ) {
+
+          //mesh.visible=false;
+					//mesh.rotation.x = 90/180*Math.PI; //export ist nicht rotiert
+					//m = new THREE.Matrix4();
+          //m.makeRotationX(90/180*Math.PI);
+					//mesh.geometry.applyMatrix(m); //export ist rotiert
+					//mesh.geometry.rotateX(90/180*Math.PI); //export ist rotiert
+					scene.add( mesh );
+					var center = mesh.geometry.boundingSphere.center;
+					controls.target.set( center.x, center.y, center.z);
+					controls.update();
+					mesh.material.clippingPlanes = clipPlanes;
+
+				} );
+
+
+				initGui();
+
+
+			/*	container = document.createElement( 'div' );
+				document.body.appendChild( container );
+				container.appendChild( renderer.domElement );
+
+				stats = new Stats();
+				container.appendChild( stats.dom );*/
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+				window.addEventListener('keypress', keyboard);
+
+			}
+
+			var helpers = new THREE.Group();
+			helpers.add( new THREE.AxesHelper( 20 ) );
+			helpers.add( new THREE.PlaneHelper( clipPlanes[ 0 ], 1, 0xff0000 ) );
+			helpers.add( new THREE.PlaneHelper( clipPlanes[ 1 ], 1, 0xff0000 ) );
+			helpers.add( new THREE.PlaneHelper( clipPlanes[ 2 ], 1, 0x00ff00 ) );
+			helpers.add( new THREE.PlaneHelper( clipPlanes[ 3 ], 1, 0x00ff00 ) );
+			helpers.add( new THREE.PlaneHelper( clipPlanes[ 4 ], 1, 0x0000ff ) );
+			helpers.add( new THREE.PlaneHelper( clipPlanes[ 5 ], 1, 0x0000ff ) );
+
+			helpers.visible = false;
+			scene.add( helpers );
+
+			function initGui() {
+				var gui = new dat.GUI();
+
+/*				gui.add( params, 'planeConstant', -5, 5).step( 0.01 ).name( 'plane constant' ).onChange( function ( value ) {
+
+					clipPlanes[ 0 ].constant = -value;
+
+
+					render();
+
+				} );
+*/
+				gui.add( params, 'planeConstantxmin', -5, 5 ).step( 0.01 ).name( 'plane xmmin' ).onChange( function ( value ) {
+
+					clipPlanes[ 0 ].constant = -value;
+
+
+//					render();
+
+				} );
+
+				gui.add( params, 'planeConstantxmax', -5, 5 ).step( 0.01 ).name( 'plane xmax' ).onChange( function ( value ) {
+
+					clipPlanes[ 1 ].constant = value;
+
+
+//					render();
+
+				} );
+				gui.add( params, 'planeConstantymin', -5, 5 ).step( 0.01 ).name( 'plane ymin' ).onChange( function ( value ) {
+
+					clipPlanes[ 2 ].constant = -value;
+
+
+//					render();
+
+				} );
+
+				gui.add( params, 'planeConstantymax', -5, 5 ).step( 0.01 ).name( 'plane ymax' ).onChange( function ( value ) {
+
+					clipPlanes[ 3 ].constant = value;
+
+
+//					render();
+
+				} );
+				gui.add( params, 'planeConstantzmin', -5, 5 ).step( 0.01 ).name( 'plane zmin' ).onChange( function ( value ) {
+
+					clipPlanes[ 4 ].constant = -value;
+
+
+//					render();
+
+				} );
+
+				gui.add( params, 'planeConstantzmax', -5, 5 ).step( 0.01 ).name( 'plane zmax' ).onChange( function ( value ) {
+
+					clipPlanes[ 5 ].constant = value;
+
+
+//					render();
+
+				} );
+
+				gui.add( params, 'showHelpers' ).name( 'show helpers' ).onChange( function ( value ) {
+
+					helpers.visible = value;
+
+//					render();
+
+				} );
+
+				gui.add( params, 'rotationX', -180, 180 ).step( 1 ).name( 'x rotation' ).onChange( function ( value ) {
+
+					var scanMesh = scene.getObjectByName( 'scan.pcd' );
+					scanMesh.rotation.x = value/180*Math.PI;
+
+
+//					render();
+
+				} );
+
+				gui.add( params, 'rotationY', -180, 180 ).step( 1 ).name( 'y rotation' ).onChange( function ( value ) {
+
+					var scanMesh = scene.getObjectByName( 'scan.pcd' );
+					scanMesh.rotation.y = value/180*Math.PI;
+
+
+//					render();
+
+				} );
+
+				gui.add( params, 'rotationZ', -180, 180 ).step( 1 ).name( 'Z rotation' ).onChange( function ( value ) {
+
+					var scanMesh = scene.getObjectByName( 'scan.pcd' );
+					scanMesh.rotation.z = value/180*Math.PI;
+
+
+//					render();
+
+				} );
+
+				gui.add( params, 'positionX', -20, 20 ).step( 0.1 ).name( 'X position' ).onChange( function ( value ) {
+
+					var scanMesh = scene.getObjectByName( 'scan.pcd' );
+					scanMesh.position.x = value;
+
+
+//					render();
+
+				} );
+
+				gui.add( params, 'positionY', -20, 20 ).step( 0.1 ).name( 'Y position' ).onChange( function ( value ) {
+
+					var scanMesh = scene.getObjectByName( 'scan.pcd' );
+					scanMesh.position.y = value;
+
+
+//					render();
+
+				} );
+
+				gui.add( params, 'positionZ', -20, 20 ).step( 0.1 ).name( 'Z position' ).onChange( function ( value ) {
+
+					var scanMesh = scene.getObjectByName( 'scan.pcd' );
+					scanMesh.position.z = value;
+
+
+//					render();
+
+				} );
+
+
+
+
+
+
+
+/*				gui.add( params, 'clipIntersection' ).name( 'clip intersection' ).onChange( function ( value ) {
+
+					var children = group.children;
+
+					for ( var i = 0; i < children.length; i ++ ) {
+
+						children[ i ].material.clipIntersection = value;
+
+					}
+
+					render();
+
+				} );
+*/
+			}
+
+			function exportPCD( mesh ) {
+
+				var geometry = mesh.geometry;
+
+				var vertices = geometry.getAttribute( 'position' );
+				//var normals = geometry.getAttribute( 'normal' );
+				var colors = geometry.getAttribute( 'color');
+
+				var output = '';
+
+				console.log("vertices: ", vertices.count);
+				//console.log("normals: ", normals.count);
+				console.log("colors: ", colors.count);
+
+				//make pcd header
+
+				output += '# .PCD v0.7 - Point Cloud Data file format' + '\n';
+				output += 'VERSION 0.7' + '\n';
+				output += 'FIELDS x y z rgb' + '\n';
+				output += 'SIZE 4 4 4 4' + '\n';
+				output += 'TYPE F F F F' + '\n';
+				output += 'COUNT 1 1 1 1' + '\n';
+				output += 'WIDTH ' + vertices.count + '\n';
+				output += 'HEIGHT 1' + '\n';
+				output += 'VIEWPOINT 0 0 0 1 0 0 0' + '\n';
+				output += 'POINTS ' + vertices.count + '\n';
+				output += 'DATA binary' + '\n';
+
+				console.log(output);
+				console.log(output[0], '\n');
+
+				console.log(vertices.getX( 1 ));
+				console.log(vertices.getY( 1 ));
+				console.log(vertices.getZ( 1 ));
+				console.log(vertices.array[3]);
+				console.log(vertices.array[4]);
+				console.log(vertices.array[5]);
+
+				console.log(colors.array[1]);
+
+				//copy vertex and color data
+				var rowSize = 4*4;
+
+				var buffer = new ArrayBuffer(output.length + rowSize * vertices.count);
+
+				var uint8View = new Uint8Array(buffer);
+
+				var dataview = new DataView( buffer, output.length );
+
+				for (var i = 0; i < output.length; i++) {
+					uint8View[i] = output.charCodeAt(i);
+				}
+				for ( var i = 0, row = 0; i < vertices.count; i ++, row += rowSize ) {
+
+					dataview.setFloat32( row + 0, vertices.getX( i ), true );
+					dataview.setFloat32( row + 4, vertices.getY( i ), true );
+					dataview.setFloat32( row + 8, vertices.getZ( i ), true );
+
+					dataview.setUint8( row + 12 + 0, Math.round(colors.array[i*3]*255));
+					dataview.setUint8( row + 12 + 1, Math.round(colors.array[i*3+1]*255));
+					dataview.setUint8( row + 12 + 2, Math.round(colors.array[i*3+2]*255));
+
+				}
+				saveArrayBuffer( buffer, 'scene.pcd' );
+
+			}
+
+			//export of clipped volume
+			function exportClippedPCD( mesh, clipPlanes ) {
+
+				var geometry = mesh.geometry;
+
+				mx = new THREE.Matrix4().makeRotationX(params.rotationX/180*Math.PI);
+				my = new THREE.Matrix4().makeRotationY(params.rotationY/180*Math.PI);
+				mz = new THREE.Matrix4().makeRotationZ(params.rotationZ/180*Math.PI);
+				mt = new THREE.Matrix4().makeTranslation(params.positionX, params.positionY, params.positionZ);
+
+//				m = new THREE.Matrix4().multiply(mx.multiply(my.multiply(mz.multiply(mt))));
+				m = new THREE.Matrix4().multiply(mt.multiply(mx.multiply(my.multiply(mz))));
+
+				//m = new THREE.Matrix4();
+				//m = mz.multiply(my.multiply(mx));
+//				mi = m.getInverse(m);
+//        mi = new THREE.Matrix4();
+
+				mxi = new THREE.Matrix4().makeRotationX(-params.rotationX/180*Math.PI);
+				myi = new THREE.Matrix4().makeRotationY(-params.rotationY/180*Math.PI);
+				mzi = new THREE.Matrix4().makeRotationZ(-params.rotationZ/180*Math.PI);
+				mti = new THREE.Matrix4().makeTranslation(-params.positionX, -params.positionY, -params.positionZ);
+
+				mi = new THREE.Matrix4().multiply(mzi.multiply(myi.multiply(mxi.multiply(mti))));
+
+				//m.makeRotationX(params.rotationX/180*Math.PI);
+				geometry.applyMatrix(m); //export ist rotiert
+
+				var vertices = geometry.getAttribute( 'position' );
+
+				//geometry.applyMatrix(mi); //zurück rotieren
+
+				//var normals = geometry.getAttribute( 'normal' );
+				var colors = geometry.getAttribute( 'color');
+
+				var output = '';
+
+				console.log("vertices: ", vertices.count);
+				//console.log("normals: ", normals.count);
+				console.log("colors: ", colors.count);
+
+				//counts points in clipped volume
+				for ( var i = 0, points = 0; i < vertices.count; i ++) {
+
+					if (vertices.getX( i ) < clipPlanes[0].constant && vertices.getX( i ) > -clipPlanes[1].constant &&
+						  vertices.getY( i ) < clipPlanes[2].constant && vertices.getY( i ) > -clipPlanes[3].constant &&
+							vertices.getZ( i ) < clipPlanes[4].constant && vertices.getZ( i ) > -clipPlanes[5].constant)
+							 points ++;
+					/*if (i < 20) {
+						console.log ('x:', vertices.getX( i ),' > ', -clipPlanes[0].constant,' && ', vertices.getX( i ), ' < ', clipPlanes[1].constant, ' = ', vertices.getX( i ) > -clipPlanes[0].constant && vertices.getX( i ) < clipPlanes[1].constant );
+						console.log ('y', vertices.getY( i ),' > ', -clipPlanes[2].constant,' && ', vertices.getY( i ), ' < ', clipPlanes[3].constant, ' = ', vertices.getY( i ) > -clipPlanes[2].constant && vertices.getY( i ) < clipPlanes[3].constant );
+					}*/
+
+				}
+				console.log(points);
+
+				//make pcd header
+				output += '# .PCD v0.7 - Point Cloud Data file format' + '\n';
+				output += 'VERSION 0.7' + '\n';
+				output += 'FIELDS x y z rgb' + '\n';
+				output += 'SIZE 4 4 4 4' + '\n';
+				output += 'TYPE F F F F' + '\n';
+				output += 'COUNT 1 1 1 1' + '\n';
+				output += 'WIDTH ' + points + '\n';
+				output += 'HEIGHT 1' + '\n';
+				output += 'VIEWPOINT 0 0 0 1 0 0 0' + '\n';
+				output += 'POINTS ' + points + '\n';
+				output += 'DATA binary' + '\n';
+
+				console.log(output);
+				console.log(output[0], '\n');
+
+				console.log(vertices.getX( 1 ));
+				console.log(vertices.getY( 1 ));
+				console.log(vertices.getZ( 1 ));
+				console.log(vertices.array[3]);
+				console.log(vertices.array[4]);
+				console.log(vertices.array[5]);
+
+				console.log(colors.array[1]);
+
+				console.log('xmin: ', -clipPlanes[0].constant);
+				console.log('xmax: ',  clipPlanes[1].constant);
+				console.log('ymin: ', -clipPlanes[2].constant);
+				console.log('ymax: ',  clipPlanes[3].constant);
+				console.log('zmin: ', -clipPlanes[4].constant);
+				console.log('zmax: ',  clipPlanes[5].constant);
+
+				//copy vertex and color data
+				var rowSize = 4*4;
+
+				var buffer = new ArrayBuffer(output.length + rowSize * points);
+
+				var uint8View = new Uint8Array(buffer);
+
+				var dataview = new DataView( buffer, output.length );
+
+				for (var i = 0; i < output.length; i++) {
+					uint8View[i] = output.charCodeAt(i);
+				}
+				for ( var i = 0, row = 0; i < vertices.count; i ++) {
+
+					if(vertices.getX( i ) < clipPlanes[0].constant && vertices.getX( i ) > -clipPlanes[1].constant &&
+					   vertices.getY( i ) < clipPlanes[2].constant && vertices.getY( i ) > -clipPlanes[3].constant &&
+						 vertices.getZ( i ) < clipPlanes[4].constant && vertices.getZ( i ) > -clipPlanes[5].constant) {
+
+						dataview.setFloat32( row + 0, vertices.getX( i ), true );
+						dataview.setFloat32( row + 4, vertices.getY( i ), true );
+						dataview.setFloat32( row + 8, vertices.getZ( i ), true );
+
+						dataview.setUint8( row + 12 + 0, Math.round(colors.array[i*3]*255));
+						dataview.setUint8( row + 12 + 1, Math.round(colors.array[i*3+1]*255));
+						dataview.setUint8( row + 12 + 2, Math.round(colors.array[i*3+2]*255));
+ 						row += rowSize;
+					}
+				}
+
+				saveArrayBuffer( buffer, 'scene.pcd' );
+				geometry.applyMatrix(mi); //zurück rotieren
+
+			}
+
+
+
+			document.getElementById( 'export_scene' ).addEventListener( 'click', function () {
+
+				//exportPCD( scene );
+				var scanMesh = scene.getObjectByName( 'scan.pcd' );
+				//exportPCD( scanMesh );
+				exportClippedPCD( scanMesh, clipPlanes);
+
+
+
+			} );
+
+			var link = document.createElement( 'a' );
+			link.style.display = 'none';
+			document.body.appendChild( link ); // Firefox workaround, see #6594
+
+			function save( blob, filename ) {
+
+				link.href = URL.createObjectURL( blob );
+				link.download = filename;
+				link.click();
+
+				// URL.revokeObjectURL( url ); breaks Firefox...
+
+			}
+
+			function saveString( text, filename ) {
+
+				save( new Blob( [ text ], { type: 'text/plain' } ), filename );
+
+			}
+
+
+			function saveArrayBuffer( buffer, filename ) {
+
+				save( new Blob( [ buffer ], { type: 'application/octet-stream' } ), filename );
+
+			}
+
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				controls.handleResize();
+
+			}
+
+			function keyboard ( ev ) {
+
+				var scanMesh = scene.getObjectByName( 'scan.pcd' );
+
+				switch ( ev.key || String.fromCharCode( ev.keyCode || ev.charCode ) ) {
+
+					case '+':
+						scanMesh.material.size*=1.2;
+						scanMesh.material.needsUpdate = true;
+						break;
+
+					case '-':
+						scanMesh.material.size/=1.2;
+						scanMesh.material.needsUpdate = true;
+						break;
+
+					case 'c':
+						scanMesh.material.color.setHex(Math.random()*0xffffff);
+						scanMesh.material.needsUpdate = true;
+						break;
+
+				}
+
+			}
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+				controls.update();
+				renderer.render( scene, camera );
+				//stats.update();
+
+			}
+
+		</script>
+	</body>
+</html>

@@ -11,6 +11,10 @@ var lastIntersected;
 var arrow;
 
 var input;
+var twoSec = false;
+var twoSecTimer = new THREE.Clock();
+var twoSecStarted = false;
+var twoSecObj;
 
 var workpieceGUI = [];
 var roboGUI = [];
@@ -238,6 +242,7 @@ function init(){
     createTracker();
     initGeometry();
     initMenu();
+    initPCD();
 
     //===================== DAT GUI =======================================================
    
@@ -275,7 +280,6 @@ function render(){
               // robo[i].rotation.y += 0.01;
             }
         }
-        
         CNC[0].rotation.z += 0.01;
         workpiece[0].rotation.y += 0.01;
     };
@@ -284,7 +288,61 @@ function render(){
     handleController(controller1);
     updateGeometry( count, paintLine.geometry.drawRange.count );
     positioningMode();
+
+    twoSeconds();
     
+    
+}
+
+function twoSeconds(){
+    if( twoSec === true){
+        if ( twoSecStarted === false){
+            twoSecTimer.start();
+            twoSecStarted = true;
+            controller2.setVibe('twoSec').set(0.01).wait(100).set(0.02).wait(100).set(0.03).wait(100).set(0.05).wait(100).set(0.03).wait(100).set(0.02).wait(100).set(0.01).wait(100).set(0).wait(500).set(0.05).wait(100).set(0.1).wait(100).set(0.15).wait(100).set(0.2).wait(100).set(0.15).wait(100).set(0.1).wait(100).set(0.05).wait(100).set(0);
+        }
+        
+        if (twoSecTimer.getElapsedTime() >= 2){
+            showGUI(twoSecObj);
+            twoSecStarted = false;
+            twoSec = false;
+        }
+    } else if (twoSec === false){
+        twoSecTimer.stop()
+        twoSecStarted = false;
+        controller2.setVibe('twoSec').set(0);
+        twoSecObj = 0;
+    }
+}
+
+function showGUI(obj){
+    if (obj.name.substring(0,3) === 'box'){
+        for(var i = 0; i <= createdWorkpiece.length -1 ; i++){
+            if (obj.name === 'box' + i.toString()){
+
+                if (!workpieceGUI[i].visible){
+                    workpieceGUI[i].visible = true;
+                    workpieceGUI[i].position.y = 0.1;
+                    prevLevel = menuStep;
+                    menuStep = 0;
+                    menu();
+                } 
+            } 
+    } 
+    } else if (obj.name.substring(0,3) === 'rob'){
+        for(var i = 0; i <= createdRobo.length -1 ; i++){
+            if (obj.name === 'robo' + i.toString()){
+                if (!roboGUI[i].visible){
+                    roboGUI[i].visible = true;
+                    roboGUI[i].position.y = 0.1;
+                    prevLevel = menuStep;
+                    menuStep = 0;
+                    menu();
+                } 
+            }
+            
+        }
+    }   
 }
 
 //================================= Render End ================================================
@@ -527,9 +585,10 @@ function onTriggerDown2(){
 function onTriggerUp2(){
     input.pressed(false);
     toggleTrigger2 = true;
+    twoSec = false;
 }
 
-function onAxisChanged2(){
+function onAxisChanged2(a){
 
 }
 
@@ -767,48 +826,41 @@ function handleIntersections(){
                 toggleTrigger2 = false;
                 return;
             } else if (object.name.substring(0, 3) === 'box'){
-                for(var i = 0; i <= createdWorkpiece.length -1 ; i++){
-                    if (object.name === 'box' + i.toString()){
-                        if (!workpieceGUI[i].visible){
-                            workpieceGUI[i].visible = true;
-                            workpieceGUI[i].position.y = 0.1;
-                            prevLevel = menuStep;
-                            menuStep = 0;
-                            menu();
-                        } else {
-                            workpieceGUI[i].visible = false;
-                            workpieceGUI[i].position.y = -100;
-                            menuStep = prevLevel;
-                            menu();
-        
-                        }
-                    }
-                    
+                twoSec = true;
+                    for(var i = 0; i <= createdWorkpiece.length -1 ; i++){
+                        if (object.name === 'box' + i.toString()){
+                            twoSecObj = object;
+                            if ( workpieceGUI[i].visible){
+                                workpieceGUI[i].visible = false;
+                                workpieceGUI[i].position.y = -100;
+                                menuStep = prevLevel;
+                                menu();
+                                twoSec = false;
+                            }
+            
+                            } 
+                        } 
                 }
                 
-            } else if (object.name.substring(0, 4) === 'robo'){
+                
+             else if (object.name.substring(0, 4) === 'robo'){
+                twoSec = true;
                 for(var i = 0; i <= createdRobo.length -1 ; i++){
                     if (object.name === 'robo' + i.toString()){
-                        if (!roboGUI[i].visible){
-                            roboGUI[i].visible = true;
-                            roboGUI[i].position.y = 0.1;
-                            prevLevel = menuStep;
-                            menuStep = 0;
-                            menu();
-                        } else {
+                        twoSecObj = object;
+                        if (roboGUI[i].visible){
                             roboGUI[i].visible = false;
                             roboGUI[i].position.y = -100;
                             menuStep = prevLevel;
                             menu();
-        
-                        }
+                            twoSec = false;
+                        } 
                     }
                     
                 }
                 
             }
         }
-	
 }
 
 function positioningMode(){
@@ -951,7 +1003,7 @@ function switchPick(){
 
             case 0:
                 
-                getRoundPos();
+                getRoundPos('robo');
     
                 getSmall(robo[0]);
                 getBig(robo[1]);
@@ -966,7 +1018,7 @@ function switchPick(){
                 break;
     
             case 1:
-                getRoundPos();
+                getRoundPos('robo');
     
                 getSmall(robo[0]);
                 getSmall(robo[1]);
@@ -978,7 +1030,7 @@ function switchPick(){
                 break;
             
             case 2:
-                getRoundPos();
+                getRoundPos('robo');
     
                 getBig(robo[0]);
                 getSmall(robo[1]);
@@ -998,19 +1050,21 @@ function switchPick(){
                 pickObj = CNC[0].clone();
         }
     } else if (menuStep === 4){
-        if (workpieceState === 2){
+        if (workpieceState === 3){
             workpieceState = 0;
         }
         switch(workpieceState){
             case 0:
-                workpiece[0].position.set(roundPositions[1].position.x, roundPositions[1].position.y, roundPositions[1].position.z);
-                workpiece[1].position.set(roundPositions[0].position.x, roundPositions[0].position.y, roundPositions[0].position.z);
+                getRoundPos('workpiece');
                 pickObj = workpiece[0].clone();
                 break;
             case 1:
-                workpiece[1].position.set(roundPositions[1].position.x, roundPositions[1].position.y, roundPositions[1].position.z);
-                workpiece[0].position.set(roundPositions[0].position.x, roundPositions[0].position.y, roundPositions[0].position.z);
+                getRoundPos('workpiece');
                 pickObj = workpiece[1].clone();
+                break;
+            case 2:
+                getRoundPos('workpiece');
+                pickObj = workpiece[2].clone();
                 break;
         } 
     }  else if (menuStep === 5){
@@ -1026,51 +1080,108 @@ function switchPick(){
     
 
     
-    function getRoundPos(){
-        switch(roboState){
-            case 0:
-                robo[0].position.x = roundPositions[0].position.x;
-                robo[0].position.y = roundPositions[0].position.y;
-                robo[0].position.z = roundPositions[0].position.z;
-
-                robo[1].position.x = roundPositions[1].position.x;
-                robo[1].position.y = roundPositions[1].position.y;
-                robo[1].position.z = roundPositions[1].position.z;
-
-                robo[2].position.x = roundPositions[2].position.x;
-                robo[2].position.y = roundPositions[2].position.y;
-                robo[2].position.z = roundPositions[2].position.z;
-                break;
-
-            case 1: 
-                robo[0].position.x = roundPositions[2].position.x;
-                robo[0].position.y = roundPositions[2].position.y;
-                robo[0].position.z = roundPositions[2].position.z;
-
-                robo[1].position.x = roundPositions[0].position.x;
-                robo[1].position.y = roundPositions[0].position.y;
-                robo[1].position.z = roundPositions[0].position.z;
-
-                robo[2].position.x = roundPositions[1].position.x;
-                robo[2].position.y = roundPositions[1].position.y;
-                robo[2].position.z = roundPositions[1].position.z;
-                break;
-            
-            case 2:
-                robo[0].position.x = roundPositions[1].position.x;
-                robo[0].position.y = roundPositions[1].position.y;
-                robo[0].position.z = roundPositions[1].position.z;
-
-                robo[1].position.x = roundPositions[2].position.x;
-                robo[1].position.y = roundPositions[2].position.y;
-                robo[1].position.z = roundPositions[2].position.z;
-
-                robo[2].position.x = roundPositions[0].position.x;
-                robo[2].position.y = roundPositions[0].position.y;
-                robo[2].position.z = roundPositions[0].position.z;
-                break;  
+    function getRoundPos(string){
+        if (string === 'robo'){
+            switch(roboState){
+                case 0:
+                    robo[0].position.x = roundPositions[0].position.x;
+                    robo[0].position.y = roundPositions[0].position.y;
+                    robo[0].position.z = roundPositions[0].position.z;
+    
+                    robo[1].position.x = roundPositions[1].position.x;
+                    robo[1].position.y = roundPositions[1].position.y;
+                    robo[1].position.z = roundPositions[1].position.z;
+    
+                    robo[2].position.x = roundPositions[2].position.x;
+                    robo[2].position.y = roundPositions[2].position.y;
+                    robo[2].position.z = roundPositions[2].position.z;
+                    break;
+    
+                case 1: 
+                    robo[0].position.x = roundPositions[2].position.x;
+                    robo[0].position.y = roundPositions[2].position.y;
+                    robo[0].position.z = roundPositions[2].position.z;
+    
+                    robo[1].position.x = roundPositions[0].position.x;
+                    robo[1].position.y = roundPositions[0].position.y;
+                    robo[1].position.z = roundPositions[0].position.z;
+    
+                    robo[2].position.x = roundPositions[1].position.x;
+                    robo[2].position.y = roundPositions[1].position.y;
+                    robo[2].position.z = roundPositions[1].position.z;
+                    break;
+                
+                case 2:
+                    robo[0].position.x = roundPositions[1].position.x;
+                    robo[0].position.y = roundPositions[1].position.y;
+                    robo[0].position.z = roundPositions[1].position.z;
+    
+                    robo[1].position.x = roundPositions[2].position.x;
+                    robo[1].position.y = roundPositions[2].position.y;
+                    robo[1].position.z = roundPositions[2].position.z;
+    
+                    robo[2].position.x = roundPositions[0].position.x;
+                    robo[2].position.y = roundPositions[0].position.y;
+                    robo[2].position.z = roundPositions[0].position.z;
+                    break;  
+            }
+            return;
+        } else if ( string === 'workpiece'){
+            switch(workpieceState){
+                case 0:
+                    workpiece[0].position.x = roundPositions[0].position.x;
+                    workpiece[0].position.y = roundPositions[0].position.y;
+                    workpiece[0].position.z = roundPositions[0].position.z;
+                    workpiece[0].scale.set(0.05 , 0.05, 0.05);
+        
+                    workpiece[1].position.x = roundPositions[1].position.x;
+                    workpiece[1].position.y = roundPositions[1].position.y;
+                    workpiece[1].position.z = roundPositions[1].position.z;
+                    workpiece[1].scale.set(0.1 , 0.1, 0.1);
+        
+                    workpiece[2].position.x = roundPositions[2].position.x;
+                    workpiece[2].position.y = roundPositions[2].position.y;
+                    workpiece[2].position.z = roundPositions[2].position.z;
+                    workpiece[2].scale.set(0.05 , 0.05, 0.05);
+                        break;
+        
+                case 1: 
+                    workpiece[0].position.x = roundPositions[2].position.x;
+                    workpiece[0].position.y = roundPositions[2].position.y;
+                    workpiece[0].position.z = roundPositions[2].position.z;
+                    workpiece[0].scale.set(0.05 , 0.05, 0.05);
+        
+                    workpiece[1].position.x = roundPositions[0].position.x;
+                    workpiece[1].position.y = roundPositions[0].position.y;
+                    workpiece[1].position.z = roundPositions[0].position.z;
+                    workpiece[0].scale.set(0.05 , 0.05, 0.05);
+        
+                    workpiece[2].position.x = roundPositions[1].position.x;
+                    workpiece[2].position.y = roundPositions[1].position.y;
+                    workpiece[2].position.z = roundPositions[1].position.z;
+                    workpiece[2].scale.set(0.1 , 0.1, 0.1);
+                    break;
+                
+                case 2:
+                    workpiece[0].position.x = roundPositions[1].position.x;
+                    workpiece[0].position.y = roundPositions[1].position.y;
+                    workpiece[0].position.z = roundPositions[1].position.z;
+                    workpiece[0].scale.set(0.1 , 0.1, 0.1);
+        
+                    workpiece[1].position.x = roundPositions[2].position.x;
+                    workpiece[1].position.y = roundPositions[2].position.y;
+                    workpiece[1].position.z = roundPositions[2].position.z;
+                    workpiece[1].scale.set(0.05 , 0.05, 0.05);
+        
+                    workpiece[2].position.x = roundPositions[0].position.x;
+                    workpiece[2].position.y = roundPositions[0].position.y;
+                    workpiece[2].position.z = roundPositions[0].position.z;
+                    workpiece[2].scale.set(0.05 , 0.05, 0.05);
+                    break;  
+            }
+            return;
         }
-        return;
+        
     }
 
     function getBig(robo){
@@ -1191,30 +1302,32 @@ function initWorkpiece(){
     
     var material = new THREE.MeshStandardMaterial({
         color: 0x207e27,
-        metalness: 0.5,
+        metalness: 0.7,
         roughness: 0.0
     })
     workpiece[0] = new THREE.Mesh(geometry, material);
-    scene.add(workpiece[0]);
     controller1.add(workpiece[0]);
     workpiece[0].scale.set(0.1 , 0.1, 0.1);
     workpiece[0].position.set(0, -0.015, -0.06);
     workpiece[0].rotateX(-60 * Math.PI / 180);
     workpiece[0].visible = false;
 
-   
-
-
-    
-
 
     var geometry = new THREE.SphereBufferGeometry(0.5, 32, 32);
     workpiece [1] = new THREE.Mesh(geometry, material);
-    scene.add(workpiece[1]);
     controller1.add(workpiece[1]);
+    workpiece[1].scale.set(0.1 , 0.1, 0.1);
     workpiece[1].position.set(0, -0.015, -0.06);
     workpiece[1].visible = false;
-}
+
+
+    var geometry = new THREE.CylinderBufferGeometry( 0.5, 0.5, 0.5, 32 );
+    workpiece[2] = new THREE.Mesh( geometry, material );
+    controller1.add(workpiece[2]);
+    workpiece[2].scale.set(0.1 , 0.1, 0.1);
+    workpiece[2].position.set(0, -0.015, -0.06);
+    workpiece[2].visible = false;
+    }
 //============================== Conveyor ==============================================================
 
 function initConveyor(){
@@ -1501,6 +1614,7 @@ function menu(){
 
             workpiece[0].visible = false;
             workpiece[1].visible = false;
+            workpiece[2].visible = false;
             conveyor[0].visible = false;
 
             break;
@@ -1525,6 +1639,7 @@ function menu(){
 
             workpiece[0].visible = false;
             workpiece[1].visible = false;
+            workpiece[2].visible = false;
             conveyor[0].visible = false;
                 
             break;
@@ -1553,6 +1668,7 @@ function menu(){
             CNC[0].visible = false;
             workpiece[0].visible = false;
             workpiece[1].visible = false;
+            workpiece[2].visible = false;
             conveyor[0].visible = false;
         
 
@@ -1576,6 +1692,7 @@ function menu(){
             CNC[0].visible = true;
             workpiece[0].visible = false;
             workpiece[1].visible = false;
+            workpiece[2].visible = false;
             conveyor[0].visible = false;
 
 
@@ -1597,8 +1714,7 @@ function menu(){
 
             workpiece[0].visible = true;
             workpiece[1].visible = true;
-            workpiece[1].position.set(roundPositions[0].position.x, roundPositions[0].position.y, roundPositions[0].position.z);
-            workpiece[1].scale.set(0.1, 0.1, 0.1);
+            workpiece[2].visible = true;
         
             break;
 
@@ -1616,6 +1732,7 @@ function menu(){
 
             workpiece[0].visible = false;
             workpiece[1].visible = false;
+            workpiece[2].visible = false;
 
             conveyor[0].visible = true;
             break;
@@ -2119,6 +2236,41 @@ function teleport(point) {
 	dollyCam.position.set(newPos.x, newPos.y, newPos.z);				// moves scene instead of Camera
 	
 }
+
+
+function initPCD(){
+        // instantiate a loader
+    var loader = new THREE.PCDLoader(manager);
+
+    // load a resource
+    loader.load(
+        // resource URL
+        'models/pcd/faps/Demonstrator_bearbeitet.pcd',
+        // called when the resource is loaded
+        function ( mesh ) {
+            var oldMat = new THREE.MeshPhongMaterial();
+            mesh.name = 'pcd';
+            mesh.position.set(-0.7 , -0.15 , 2.4);
+            scene.add( mesh );
+
+        },
+        // called when loading is in progresses
+        function ( xhr ) {
+
+            console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+
+        },
+        // called when loading has errors
+        function ( error ) {
+
+            console.log( 'An error happened' );
+
+        }
+    );
+}
+
+
+
 
 /*
 function loadTest3(){
