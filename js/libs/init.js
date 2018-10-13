@@ -941,50 +941,75 @@ function positioningMode(){
 
 function createGUI(obj){
     if( menuStep === 2){
-        roboGUI[createdRoboCounter] = dat.GUIVR.create(obj.name);
-        roboGUI[createdRoboCounter].add(obj.position, 'x', -floor.geometry.parameters.width/2,  floor.geometry.parameters.width/2).step(0.25).name('Position x').listen();
-        roboGUI[createdRoboCounter].add(obj.position, 'y', 0, 10).step(0.25).name('Position y').listen();
-        roboGUI[createdRoboCounter].add(obj.position, 'z', -floor.geometry.parameters.height/2,  floor.geometry.parameters.height/2).step(0.25).name('Position z').listen();
-        roboGUI[createdRoboCounter].add(obj.rotation, 'x', 0 , 2* Math.PI).name('Rotation x');
-        roboGUI[createdRoboCounter].add(obj.rotation, 'y', 0 , 2* Math.PI).name('Rotation y');
-        roboGUI[createdRoboCounter].add(obj.rotation, 'z', 0 , 2* Math.PI).name('Rotation z');
+        var options = {
+            position: {
+                x: obj.position.x,
+                y: obj.position.y,
+                z: obj.position.z,
+            },
+            rotation: {
+                x: obj.rotation.x,
+                y: obj.rotation.y,
+                z: obj.rotation.z
+            },
+            window: {
+                x: -0.1,
+                y: 0.1,
+                z: 0
+            },
+            reposition: function(gui){
+                gui.position.set(this.window.x, this.window.y, this.window.z);
+            }  
+        }
+
+        var c = createdRoboCounter;
+
+        roboGUI[c] = dat.GUIVR.create(obj.name);
+        roboGUI[c].add(options.position, 'x', -floor.geometry.parameters.width/2,  floor.geometry.parameters.width/2).step(0.25).name('Position x').listen();
+        roboGUI[c].add(options.position, 'y', 0, 10).step(0.25).name('Position y').listen();
+        roboGUI[c].add(options.position, 'z', -floor.geometry.parameters.height/2,  floor.geometry.parameters.height/2).step(0.25).name('Position z').listen();
+        roboGUI[c].add(options.rotation, 'x', 0 , 2* Math.PI).step(1/360).name('Rotation x');
+        roboGUI[c].add(options.rotation, 'y', 0 , 2* Math.PI).step(1/360).name('Rotation y');
+        roboGUI[c].add(options.rotation, 'z', 0 , 2* Math.PI).step(1/360).name('Rotation z');
+        roboGUI[c].add(options, 'reposition').name('Reposition window');
         
 
-        roboGUI[createdRoboCounter].scale.set(0.2, 0.2, 0.2);
-        roboGUI[createdRoboCounter].position.set(-0.1, -100, 0);
-        roboGUI[createdRoboCounter].rotateX(-60 * Math.PI / 180);
-        roboGUI[createdRoboCounter].visible = false;
-        controller1.add(roboGUI[createdRoboCounter]);
-        roboGUI[createdRoboCounter].name = 'exclude'
-        roboGUI[createdRoboCounter].traverse( function(child){
+        roboGUI[c].scale.set(0.2, 0.2, 0.2);
+        roboGUI[c].position.set(-0.1, -100, 0);
+        roboGUI[c].rotateX(-60 * Math.PI / 180);
+        roboGUI[c].visible = false;
+        controller1.add(roboGUI[c]);
+        roboGUI[c].name = 'exclude'
+        roboGUI[c].traverse( function(child){
             if (child instanceof THREE.Mesh){
                 child.name = 'exclude';
             }
         });
-        rayGroup.push(roboGUI[createdRoboCounter]);
+        rayGroup.push(roboGUI[c]);
     }
     if (menuStep === 4){
         
-        workpieceGUI[createdWorkpieceCounter] = dat.GUIVR.create(obj.name);
-        workpieceGUI[createdWorkpieceCounter].add(obj.position, 'x').min(-floor.geometry.parameters.width/2).max(floor.geometry.parameters.width/2).step(0.25).name('Position x').listen();
-        workpieceGUI[createdWorkpieceCounter].add(obj.position, 'y').min(0).max(10).step(0.25).name('Position y').listen();
-        workpieceGUI[createdWorkpieceCounter].add(obj.position, 'z').min(-floor.geometry.parameters.height/2).max(floor.geometry.parameters.height/2).step(0.25).name('Position z').listen();
-        workpieceGUI[createdWorkpieceCounter].add(obj.scale, 'x', 0.1, 5).name('Scale x');
-        workpieceGUI[createdWorkpieceCounter].add(obj.scale, 'y', 0.1, 5).name('Scale y');
-        workpieceGUI[createdWorkpieceCounter].add(obj.scale, 'z', 0.1, 5).name('Scale z');
+        var c = createdWorkpieceCounter;
+        workpieceGUI[c] = dat.GUIVR.create(obj.name);
+        workpieceGUI[c].add(obj.position, 'x').min(-floor.geometry.parameters.width/2).max(floor.geometry.parameters.width/2).step(0.25).name('Position x').listen();
+        workpieceGUI[c].add(obj.position, 'y').min(0).max(10).step(0.25).name('Position y').listen();
+        workpieceGUI[c].add(obj.position, 'z').min(-floor.geometry.parameters.height/2).max(floor.geometry.parameters.height/2).step(0.25).name('Position z').listen();
+        workpieceGUI[c].add(obj.scale, 'x', 0.1, 5).name('Scale x');
+        workpieceGUI[c].add(obj.scale, 'y', 0.1, 5).name('Scale y');
+        workpieceGUI[c].add(obj.scale, 'z', 0.1, 5).name('Scale z');
 
-        workpieceGUI[createdWorkpieceCounter].scale.set(0.2, 0.2, 0.2);
-        workpieceGUI[createdWorkpieceCounter].position.set(-0.1, -100, 0);
-        workpieceGUI[createdWorkpieceCounter].rotateX(-60 * Math.PI / 180);
-        workpieceGUI[createdWorkpieceCounter].visible = false;
-        controller1.add(workpieceGUI[createdWorkpieceCounter]);
-        workpieceGUI[createdWorkpieceCounter].name = 'exclude'
-        workpieceGUI[createdWorkpieceCounter].traverse( function(child){
+        workpieceGUI[c].scale.set(0.2, 0.2, 0.2);
+        workpieceGUI[c].position.set(-0.1, -100, 0);
+        workpieceGUI[c].rotateX(-60 * Math.PI / 180);
+        workpieceGUI[c].visible = false;
+        controller1.add(workpieceGUI[c]);
+        workpieceGUI[c].name = 'exclude'
+        workpieceGUI[c].traverse( function(child){
             if (child instanceof THREE.Mesh){
                 child.name = 'exclude';
             }
         });
-        rayGroup.push(workpieceGUI[createdWorkpieceCounter]);
+        rayGroup.push(workpieceGUI[c]);
     }
 
    
@@ -1670,11 +1695,6 @@ function menu(){
             workpiece[1].visible = false;
             workpiece[2].visible = false;
             conveyor[0].visible = false;
-        
-
-        
-            
-
             break;      
         
         case 3:
@@ -1694,9 +1714,6 @@ function menu(){
             workpiece[1].visible = false;
             workpiece[2].visible = false;
             conveyor[0].visible = false;
-
-
-
             break;
 
         case 4:
@@ -1818,7 +1835,7 @@ function menu(){
         controller1.add(menuLevel[3]);
         menuLevel[3].visible = false;
 
-        addSymbol('CNC', 0.02, 0.02, 0.002, 0.002, 3);                                                          //symbol[2][1]: CNC
+        addSymbol('CNC', 0.02, 0.02, 0.002, 0.002, 3, './images/symbols/cnc.png');                      //symbol[2][1]: CNC
         symbol[3][0].position.set(0, 0.04, 0.05);
 
         
@@ -1828,7 +1845,7 @@ function menu(){
         controller1.add(menuLevel[4]);
         menuLevel[4].visible = false;
 
-        addSymbol('Workpiece', 0.02, 0.02, 0.002, 0.002, 4);                                                    //symbol[2][2]: Workpiece
+        addSymbol('Workpiece', 0.02, 0.02, 0.002, 0.002, 4, './images/symbols/workpiece.png');          //symbol[2][2]: Workpiece
         symbol[4][0].position.set(0, 0.03, 0.08);
 
         menuLevel[5] = new THREE.Object3D();                                                            //menu for configuration mode
@@ -1836,8 +1853,7 @@ function menu(){
         controller1.add(menuLevel[5]);
         menuLevel[5].visible = false;
 
-        addSymbol('Conveyor', 0.02, 0.02, 0.002, 0.002, 5);                                                         //symbol[2][3]: Lines
-        symbol[5][0].position.set(0, 0.02, 0.11);
+        addSymbol('Conveyer', 0.02, 0.02, 0.002, 0.002, 5, './images/symbols/conveyor.png');            //symbol[2][3]: Conveyor
         
         
         
