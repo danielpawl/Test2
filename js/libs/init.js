@@ -1,6 +1,6 @@
 //============================ Declaration ==========================================
 
-var scene, render, renderer, dollyCam, camera, controller1, controller2, clock, cube, floor;
+var scene, render, renderer, dollyCam, camera, controller1, controller2, controller3, clock, cube, floor;
 var manager;
 var tutorialWindows = new THREE.Object3D();
 var dragCube = false;
@@ -201,17 +201,24 @@ function init(){
         
     //====================== Controller ============================================
 
-        controller1 = new THREE.ViveController(0);
+        controller1 = new THREE.ViveController(1);
         controller1.standingMatrix = renderer.vr.getStandingMatrix();
         controller1.userData.points = [ new THREE.Vector3(), new THREE.Vector3() ];
 		controller1.userData.matrices = [ new THREE.Matrix4(), new THREE.Matrix4() ];
         dollyCam.add(controller1);
 
-        controller2 = new THREE.ViveController(1);
+        controller2 = new THREE.ViveController(2);
         controller2.standingMatrix = renderer.vr.getStandingMatrix();
         controller2.userData.points = [ new THREE.Vector3(), new THREE.Vector3() ];
 		controller2.userData.matrices = [ new THREE.Matrix4(), new THREE.Matrix4() ];
         dollyCam.add(controller2);
+
+        controller3 = new THREE.ViveTracker(0)
+        controller3.standingMatrix = renderer.vr.getStandingMatrix();
+        controller3.userData.points = [ new THREE.Vector3(), new THREE.Vector3() ];
+		controller3.userData.matrices = [ new THREE.Matrix4(), new THREE.Matrix4() ];
+        dollyCam.add(controller3);
+    
 
 
         loadController();
@@ -264,6 +271,11 @@ function render(){
 
     controller1.update();
     controller2.update();
+    controller3.update();
+    if (controller3.children[0] !== undefined){
+        controller3.children[0].position.z = 1;
+    }
+    
     renderer.setAnimationLoop(render);
     renderer.render(scene, camera);
     
@@ -388,6 +400,11 @@ function loadController() {
 
         controller1.name = 'Controller1';
         controller1.add(tutorialWindows);
+
+    var geometry = new THREE.BoxBufferGeometry(0.1, 0.1, 0.1);
+    var material = new THREE.MeshStandardMaterial({color: 0x00ff00});
+    var mesh = new THREE.Mesh(geometry, material);
+    controller3.add(mesh);
 
  
     }
@@ -941,6 +958,11 @@ function positioningMode(){
 
 function createGUI(obj){
     if( menuStep === 2){
+
+        var c = createdRoboCounter;
+        roboGUI[c] = dat.GUIVR.create(obj.name);
+
+        
         var options = {
             position: {
                 x: obj.position.x,
@@ -957,14 +979,10 @@ function createGUI(obj){
                 y: 0.1,
                 z: 0
             },
-            reposition: function(gui){
-                gui.position.set(this.window.x, this.window.y, this.window.z);
-            }  
+            reposition: function(){ repositionWindow(roboGUI[c])} 
         }
 
-        var c = createdRoboCounter;
-
-        roboGUI[c] = dat.GUIVR.create(obj.name);
+       
         roboGUI[c].add(options.position, 'x', -floor.geometry.parameters.width/2,  floor.geometry.parameters.width/2).step(0.25).name('Position x').listen();
         roboGUI[c].add(options.position, 'y', 0, 10).step(0.25).name('Position y').listen();
         roboGUI[c].add(options.position, 'z', -floor.geometry.parameters.height/2,  floor.geometry.parameters.height/2).step(0.25).name('Position z').listen();
@@ -991,12 +1009,38 @@ function createGUI(obj){
         
         var c = createdWorkpieceCounter;
         workpieceGUI[c] = dat.GUIVR.create(obj.name);
+
+        var options = {
+            position: {
+                x: obj.position.x,
+                y: obj.position.y,
+                z: obj.position.z,
+            },
+            rotation: {
+                x: obj.rotation.x,
+                y: obj.rotation.y,
+                z: obj.rotation.z
+            },
+            window: {
+                x: -0.1,
+                y: 0.1,
+                z: 0
+            },
+            reposition: function(){ repositionWindow(workpieceGUI[c])} 
+        }
+
+
+
         workpieceGUI[c].add(obj.position, 'x').min(-floor.geometry.parameters.width/2).max(floor.geometry.parameters.width/2).step(0.25).name('Position x').listen();
         workpieceGUI[c].add(obj.position, 'y').min(0).max(10).step(0.25).name('Position y').listen();
         workpieceGUI[c].add(obj.position, 'z').min(-floor.geometry.parameters.height/2).max(floor.geometry.parameters.height/2).step(0.25).name('Position z').listen();
+        workpieceGUI[c].add(obj.rotation, 'x', 0 , 2* Math.PI).step(1/360).name('Rotation x');
+        workpieceGUI[c].add(obj.rotation, 'y', 0 , 2* Math.PI).step(1/360).name('Rotation y');
+        workpieceGUI[c].add(obj.rotation, 'z', 0 , 2* Math.PI).step(1/360).name('Rotation z');
         workpieceGUI[c].add(obj.scale, 'x', 0.1, 5).name('Scale x');
         workpieceGUI[c].add(obj.scale, 'y', 0.1, 5).name('Scale y');
         workpieceGUI[c].add(obj.scale, 'z', 0.1, 5).name('Scale z');
+        workpieceGUI[c].add(options, 'reposition').name('Reposition window');
 
         workpieceGUI[c].scale.set(0.2, 0.2, 0.2);
         workpieceGUI[c].position.set(-0.1, -100, 0);
@@ -1012,7 +1056,9 @@ function createGUI(obj){
         rayGroup.push(workpieceGUI[c]);
     }
 
-   
+   function repositionWindow(gui){
+        gui.position.set(options.window.x, options.window.y, options.window.z);
+   }
     
 }
 
@@ -1853,8 +1899,8 @@ function menu(){
         controller1.add(menuLevel[5]);
         menuLevel[5].visible = false;
 
-        addSymbol('Conveyer', 0.02, 0.02, 0.002, 0.002, 5, './images/symbols/conveyor.png');            //symbol[2][3]: Conveyor
-        
+        addSymbol('Conveyor', 0.02, 0.02, 0.002, 0.002, 5, './images/symbols/conveyor.png');            //symbol[2][3]: Conveyor
+        symbol[5][0].position.set(0, 0.02, 0.11)
         
         
         for(var i = 0; i <= menuLevel.length -1 ; i++){
@@ -2210,6 +2256,11 @@ function menu(){
         var dz = mesh1.position.z - mesh2.position.z; 
         return sqrt(dx*dx+dy*dy+dz*dz); 
       }
+
+    function getDistanceY(mesh1, mesh2){
+        var dy = mesh1.position.y - mesh2.position.y; 
+        return dy;
+    }
       
     
 
@@ -2266,8 +2317,9 @@ function initPCD(){
         function ( mesh ) {
             var oldMat = new THREE.MeshPhongMaterial();
             mesh.name = 'pcd';
-            mesh.position.set(-0.7 , -0.15 , 2.4);
-            scene.add( mesh );
+           // mesh.position.set(-0.7 , -0.15 , 2.4);
+           mesh.rotateX(-90*Math.PI / 180);
+            controller3.add( mesh );
 
         },
         // called when loading is in progresses
