@@ -6,6 +6,11 @@ THREE.ViveTracker = function ( id ) {
 	var gamepad;
 	id = id;
 
+	this.giveID = function (newID){
+		id = newID;
+		
+	}
+
 	
 	function findGamepad( id ) {
 
@@ -13,10 +18,15 @@ THREE.ViveTracker = function ( id ) {
 		// in position 0 and 1.
 
 		var gamepads = navigator.getGamepads && navigator.getGamepads();
+		
 
 		for ( var i = 0, j = 0; i < gamepads.length; i ++ ) {
+			
 
-            var gamepad = gamepads[ i ];
+			var gamepad = gamepads[ i ];
+			
+		
+
             
             
 

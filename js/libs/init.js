@@ -9,6 +9,8 @@ var tempMatrix = new THREE.Matrix4();
 var intersected = [];
 var lastIntersected;
 var arrow;
+var gamepads, aha;
+var IDdistributed = false;
 
 var input;
 var twoSec = false;
@@ -201,23 +203,35 @@ function init(){
         
     //====================== Controller ============================================
 
-        controller1 = new THREE.ViveController(1);
-        controller1.standingMatrix = renderer.vr.getStandingMatrix();
-        controller1.userData.points = [ new THREE.Vector3(), new THREE.Vector3() ];
-		controller1.userData.matrices = [ new THREE.Matrix4(), new THREE.Matrix4() ];
-        dollyCam.add(controller1);
+        
 
-        controller2 = new THREE.ViveController(2);
-        controller2.standingMatrix = renderer.vr.getStandingMatrix();
-        controller2.userData.points = [ new THREE.Vector3(), new THREE.Vector3() ];
-		controller2.userData.matrices = [ new THREE.Matrix4(), new THREE.Matrix4() ];
-        dollyCam.add(controller2);
+      
+           // if (gamepads[i].id === 'OpenVR Tracker') 
+                controller3 = new THREE.ViveTracker()
+                controller3.standingMatrix = renderer.vr.getStandingMatrix();
+                controller3.userData.points = [ new THREE.Vector3(), new THREE.Vector3() ];
+                controller3.userData.matrices = [ new THREE.Matrix4(), new THREE.Matrix4() ];
+                dollyCam.add(controller3);
+    
+            
+                controller1 = new THREE.ViveController();
+                controller1.standingMatrix = renderer.vr.getStandingMatrix();
+                controller1.userData.points = [ new THREE.Vector3(), new THREE.Vector3() ];
+                controller1.userData.matrices = [ new THREE.Matrix4(), new THREE.Matrix4() ];
+                dollyCam.add(controller1);
+           
+                controller2 = new THREE.ViveController();
+                controller2.standingMatrix = renderer.vr.getStandingMatrix();
+                controller2.userData.points = [ new THREE.Vector3(), new THREE.Vector3() ];
+                controller2.userData.matrices = [ new THREE.Matrix4(), new THREE.Matrix4() ];
+                dollyCam.add(controller2);
+            
+        
+        
 
-        controller3 = new THREE.ViveTracker(0)
-        controller3.standingMatrix = renderer.vr.getStandingMatrix();
-        controller3.userData.points = [ new THREE.Vector3(), new THREE.Vector3() ];
-		controller3.userData.matrices = [ new THREE.Matrix4(), new THREE.Matrix4() ];
-        dollyCam.add(controller3);
+        
+
+        
     
 
 
@@ -257,7 +271,7 @@ function init(){
     scene.add(input);
 
     
-
+    
 
     
 
@@ -269,9 +283,11 @@ function init(){
 
 function render(){
 
+    distributeID();
     controller1.update();
     controller2.update();
     controller3.update();
+    
     if (controller3.children[0] !== undefined){
         controller3.children[0].position.z = 1;
     }
@@ -284,8 +300,10 @@ function render(){
         controller1.remove(tutorialWindows);
     };
     
+
     intersectObjects(controller2);
     //cleanIntersected();
+
     if(clock.getElapsedTime() >= 5){
         for (var i = 0; i <= robo.length -1 ; i++){
             if (robo[i] !== undefined){
@@ -409,6 +427,29 @@ function loadController() {
  
     }
 
+function distributeID(){
+    if (IDdistributed === false){
+        gamepads = navigator.getGamepads();
+        aha = gamepads.length;
+        var a;
+        for ( var i = 0;  i < gamepads.length ; i++){
+            if (gamepads[i].id === 'OpenVR Tracker'){
+                controller3.giveID(i);
+                a = i;
+            }
+        }
+        if ( a === 0){
+            controller1.giveID(1);
+            controller2.giveID(2);
+            IDdistributed = true;
+        } else if ( a === 2){
+            controller1.giveID(0);
+            controller2.giveID(1);
+            IDdistributed = true;
+        }
+    }
+    
+}
 
 //================================ Controller 1 ===================================================
 
@@ -454,106 +495,6 @@ function onAxisChanged1(a){
 }
 
 function onThumbpadDown1(){
-    var border = 0.3
-
-    switch(menuStep){
-        case 1:
-            if ( axisX <= -border && targetNo !== symbol[menuStep][0].value ){ 
-                targetNo -= 1; 
-                menu();
-                return;
-            } 
-            if ( axisX >= border && targetNo !== symbol[menuStep][1].value){
-                targetNo += 1; 
-                menu();
-                return;
-            }
-            
-            if ( axisX <= border && axisX >= -border && axisY <= border && axisY >= -border){
-
-                if( targetNo === symbol[menuStep][0].value) {
-                    controller1.paintOff();
-                    menuStep = 2;
-                    targetNo = symbol[menuStep][0].value;
-                    menu();
-                    return;
-                }    
-                if ( targetNo === symbol[menuStep][1].value) {
-                    controller1.paintOn();
-                    menuStep = 0;
-                    menu();
-                    return;
-                }
-            }
-            break;
-
-        case 2: 
-                                                                                                                            // if( axisY >= border && menuStep < symbol[menuStep][symbolCounter[menuStep]-1].value){
-             if( axisY >= border){              
-                menuStep++;
-                targetNo = symbol[menuStep][0].value;
-                menu();
-                return;
-            } 
-            if ( axisX <= border && axisX >= -border && axisY <= border && axisY >= -border){
-
-                if( targetNo === 2) {
-                   
-                    if (axisX <= border) {
-                        robo[1].position.set(-0.1, -0.05, -0.1);
-                        robo[1].scale.set(0.05, 0.05, 0.05);
-                        robo[2].position.set(0.1, -0.05, -0.1);
-                        robo[2].scale.set(0.05, 0.05, 0.05);
-                    }
-                    return;
-                }
-            } 
-            break;
-        
-        case 3:
-            if( axisY >= border){              
-                menuStep++;
-                targetNo = symbol[menuStep][0].value;
-                menu();
-                return;
-            }
-            if( axisY <= border){
-                menuStep--;
-                targetNo = symbol[menuStep][0].value;
-                menu();
-                return;
-            }
-        
-        case 4:
-            if( axisY >= border){              
-                menuStep++;
-                targetNo = symbol[menuStep][0].value;
-                menu();
-                return;
-            }
-            if( axisY <= border){
-                menuStep--;
-                targetNo = symbol[menuStep][0].value;
-                menu();
-                return;
-            }
-        
-        case 5:
-
-            if( axisY >= border){              
-                menuStep++;
-                targetNo = symbol[menuStep][0].value;
-                menu();
-                return;
-            }
-            if( axisY <= border){
-                menuStep--;
-                targetNo = symbol[menuStep][0].value;
-                menu();
-                return;
-            }
-    } 
-
 }
 
 function onThumbpadUp1(){
@@ -1127,15 +1068,15 @@ function switchPick(){
         switch(workpieceState){
             case 0:
                 getRoundPos('workpiece');
-                pickObj = workpiece[0].clone();
+                pickObj = workpiece[1].clone();
                 break;
             case 1:
                 getRoundPos('workpiece');
-                pickObj = workpiece[1].clone();
+                pickObj = workpiece[2].clone();
                 break;
             case 2:
                 getRoundPos('workpiece');
-                pickObj = workpiece[2].clone();
+                pickObj = workpiece[0].clone();
                 break;
         } 
     }  else if (menuStep === 5){
@@ -1206,9 +1147,9 @@ function switchPick(){
                     workpiece[0].scale.set(0.05 , 0.05, 0.05);
         
                     workpiece[1].position.x = roundPositions[1].position.x;
-                    workpiece[1].position.y = roundPositions[1].position.y;
-                    workpiece[1].position.z = roundPositions[1].position.z;
-                    workpiece[1].scale.set(0.1 , 0.1, 0.1);
+                    workpiece[1].position.y = roundPositions[1].position.y+0.04;
+                    workpiece[1].position.z = roundPositions[1].position.z -0.04;
+                    workpiece[1].scale.set(0.12 , 0.12, 0.12);
         
                     workpiece[2].position.x = roundPositions[2].position.x;
                     workpiece[2].position.y = roundPositions[2].position.y;
@@ -1225,19 +1166,19 @@ function switchPick(){
                     workpiece[1].position.x = roundPositions[0].position.x;
                     workpiece[1].position.y = roundPositions[0].position.y;
                     workpiece[1].position.z = roundPositions[0].position.z;
-                    workpiece[0].scale.set(0.05 , 0.05, 0.05);
+                    workpiece[1].scale.set(0.05 , 0.05, 0.05);
         
                     workpiece[2].position.x = roundPositions[1].position.x;
-                    workpiece[2].position.y = roundPositions[1].position.y;
-                    workpiece[2].position.z = roundPositions[1].position.z;
-                    workpiece[2].scale.set(0.1 , 0.1, 0.1);
+                    workpiece[2].position.y = roundPositions[1].position.y+0.04;
+                    workpiece[2].position.z = roundPositions[1].position.z-0.04;
+                    workpiece[2].scale.set(0.12 , 0.12, 0.12);
                     break;
                 
                 case 2:
                     workpiece[0].position.x = roundPositions[1].position.x;
-                    workpiece[0].position.y = roundPositions[1].position.y;
-                    workpiece[0].position.z = roundPositions[1].position.z;
-                    workpiece[0].scale.set(0.1 , 0.1, 0.1);
+                    workpiece[0].position.y = roundPositions[1].position.y+0.04;
+                    workpiece[0].position.z = roundPositions[1].position.z-0.04;
+                    workpiece[0].scale.set(0.12 , 0.12, 0.12);
         
                     workpiece[1].position.x = roundPositions[2].position.x;
                     workpiece[1].position.y = roundPositions[2].position.y;
@@ -1371,7 +1312,7 @@ function initWorkpiece(){
     var loader = new THREE.TextureLoader(manager);
     var geometry = new THREE.BoxBufferGeometry(0.5, 0.5, 0.5);
     
-    var material = new THREE.MeshStandardMaterial({
+    var material = new THREE.MeshPhongMaterial({
         color: 0x207e27,
         metalness: 0.7,
         roughness: 0.0
@@ -1384,7 +1325,7 @@ function initWorkpiece(){
     workpiece[0].visible = false;
 
 
-    var geometry = new THREE.SphereBufferGeometry(0.5, 32, 32);
+    var geometry = new THREE.SphereBufferGeometry(0.3, 32, 32);
     workpiece [1] = new THREE.Mesh(geometry, material);
     controller1.add(workpiece[1]);
     workpiece[1].scale.set(0.1 , 0.1, 0.1);
@@ -1392,7 +1333,7 @@ function initWorkpiece(){
     workpiece[1].visible = false;
 
 
-    var geometry = new THREE.CylinderBufferGeometry( 0.5, 0.5, 0.5, 32 );
+    var geometry = new THREE.CylinderBufferGeometry( 0.3, 0.3, 0.3, 32 );
     workpiece[2] = new THREE.Mesh( geometry, material );
     controller1.add(workpiece[2]);
     workpiece[2].scale.set(0.1 , 0.1, 0.1);
@@ -1778,6 +1719,12 @@ function menu(){
             workpiece[0].visible = true;
             workpiece[1].visible = true;
             workpiece[2].visible = true;
+
+            for (var i = 0; i <= workpiece.length -1 ; i++){
+                workpiece[i].visible = true;
+                workpiece[i].position.set(roundPositions[i].position.x, roundPositions[i].position.y, roundPositions[i].position.z);
+
+            }
         
             break;
 
@@ -1850,17 +1797,18 @@ function menu(){
         controller1.add(menuLevel[2]);
         menuLevel[2].visible = false;
 
-        addSymbol('Robot', 0.02, 0.02, 0.002, 0.002, 2, './images/symbols/robot.png');                          //symbol[2][0]: Robot
-        symbol[2][0].position.set(0, 0.05, 0.02);
+        addSymbol('Robot', 0.04, 0.04, 0.002, 0.002, 2, './images/symbols/robot.png');                          //symbol[2][0]: Robot
+        symbol[2][0].position.set(0.025, 0.03, -0.25);
+        symbol[2][0].rotateX(30*Math.PI /180);
 
-        var geometry = new THREE.PlaneBufferGeometry(0.05, 0.05);
-        var material = new THREE.MeshPhongMaterial({color: 0xffff00});
-        var pick = new THREE.Mesh(geometry, material);
-        pick.position.set(0.2, 0.05, 0.05);
-        pick.rotateX(-90 * Math.PI /180);
-        pick.name = "pick";
 
-        menuLevel[2].add(pick);
+
+        addSymbol('pick', 0.05, 0.05, 0.002, 0.002, 2, './images/symbols/ok.png');
+        symbol[2][1].position.set(0.1, 0.05, 0.05);
+      
+        
+
+        //menuLevel[2].add(pick);
         
     
     
@@ -1881,8 +1829,9 @@ function menu(){
         controller1.add(menuLevel[3]);
         menuLevel[3].visible = false;
 
-        addSymbol('CNC', 0.02, 0.02, 0.002, 0.002, 3, './images/symbols/cnc.png');                      //symbol[2][1]: CNC
-        symbol[3][0].position.set(0, 0.04, 0.05);
+        addSymbol('CNC', 0.04, 0.04, 0.002, 0.002, 3, './images/symbols/cnc.png');                      //symbol[2][1]: CNC
+        symbol[3][0].position.set(0.075, 0.03, -0.25);
+        symbol[3][0].rotateX(30*Math.PI /180);
 
         
 
@@ -1891,16 +1840,18 @@ function menu(){
         controller1.add(menuLevel[4]);
         menuLevel[4].visible = false;
 
-        addSymbol('Workpiece', 0.02, 0.02, 0.002, 0.002, 4, './images/symbols/workpiece.png');          //symbol[2][2]: Workpiece
-        symbol[4][0].position.set(0, 0.03, 0.08);
+        addSymbol('Workpiece', 0.04, 0.04, 0.002, 0.002, 4, './images/symbols/workpiece.png');          //symbol[2][2]: Workpiece
+        symbol[4][0].position.set(0.125, 0.03,-0.25);
+        symbol[4][0].rotateX(30*Math.PI /180);
 
         menuLevel[5] = new THREE.Object3D();                                                            //menu for configuration mode
         menuLevel[5].position.set(-0.1, 0 ,-0,15);
         controller1.add(menuLevel[5]);
         menuLevel[5].visible = false;
 
-        addSymbol('Conveyor', 0.02, 0.02, 0.002, 0.002, 5, './images/symbols/conveyor.png');            //symbol[2][3]: Conveyor
-        symbol[5][0].position.set(0, 0.02, 0.11)
+        addSymbol('Conveyor', 0.04, 0.04, 0.002, 0.002, 5, './images/symbols/conveyor.png');            //symbol[2][3]: Conveyor
+        symbol[5][0].position.set(0.175, 0.03, -0.25);
+        symbol[5][0].rotateX(30*Math.PI /180);
         
         
         for(var i = 0; i <= menuLevel.length -1 ; i++){
@@ -2215,7 +2166,7 @@ function menu(){
     }
 
     function createArrowButtons(){
-        var extrudeSettings = {  bevelEnabled: false, depth: 0.01};
+        var extrudeSettings = {  bevelEnabled: false, depth: 0.005};
 
         var shape = new THREE.Shape();
         shape.moveTo(0 , 0);
@@ -2312,13 +2263,13 @@ function initPCD(){
     // load a resource
     loader.load(
         // resource URL
-        'models/pcd/faps/Demonstrator_bearbeitet.pcd',
+        'models/pcd/faps/table.pcd',
         // called when the resource is loaded
         function ( mesh ) {
             var oldMat = new THREE.MeshPhongMaterial();
             mesh.name = 'pcd';
            // mesh.position.set(-0.7 , -0.15 , 2.4);
-           mesh.rotateX(-90*Math.PI / 180);
+            mesh.rotateX(-90*Math.PI / 180);
             controller3.add( mesh );
 
         },

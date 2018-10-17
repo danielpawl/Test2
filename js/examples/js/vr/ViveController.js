@@ -24,6 +24,12 @@ THREE.ViveController = function ( id ) {
 	this.vibeChannels.prior = 0
 	
 
+	this.giveID = function (newID){
+		id = newID;
+		
+	}
+
+
 	function findGamepad( id ) {
 
 		// Iterate across gamepads as Vive Controllers may not be
