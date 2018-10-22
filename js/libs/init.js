@@ -11,6 +11,7 @@ var lastIntersected;
 var arrow;
 var gamepads, aha;
 var IDdistributed = false;
+var rotateObjXArray = [];
 
 var input;
 var twoSec = false;
@@ -18,8 +19,6 @@ var twoSecTimer = new THREE.Clock();
 var twoSecStarted = false;
 var twoSecObj;
 
-var workpieceGUI = [];
-var roboGUI = [];
 
 var robotest;
 
@@ -56,6 +55,8 @@ var CNCCounter = 0;
 var workpiece = [];
 var conveyor = [];
 var conveyorCounter = 0;
+var PCD = [];
+var PCDCounter = 0;
 
 
 
@@ -265,6 +266,7 @@ function init(){
     initMenu();
     initPCD();
 
+
     //===================== DAT GUI =======================================================
    
     input = dat.GUIVR.addInputObject(controller2);
@@ -307,9 +309,34 @@ function render(){
     if(clock.getElapsedTime() >= 5){
         for (var i = 0; i <= robo.length -1 ; i++){
             if (robo[i] !== undefined){
-              // robo[i].rotation.y += 0.01;
+                if (robo[i].userData.axis === 'y'){
+                    robo[i].rotation.y += 0.01;
+                } else {
+                    robo[i].rotation.z += 0.01;
+                }
+                
             }
         }
+
+        for (var i = 0; i <= workpiece.length -1 ; i++){
+            if (workpiece[i] !== undefined){
+                workpiece[i].rotation.y += 0.01;
+                
+            }
+        }
+
+        for (var i = 0; i <= conveyor.length -1 ; i++){
+            if (conveyor[i] !== undefined){
+                if (conveyor[i].userData.axis === 'y'){
+                    conveyor[i].rotation.y += 0.01;
+                } else {
+                    conveyor[i].rotation.z += 0.01;
+                }
+                
+            }
+        }
+
+
         CNC[0].rotation.z += 0.01;
         workpiece[0].rotation.y += 0.01;
     };
@@ -320,7 +347,16 @@ function render(){
     positioningMode();
 
     twoSeconds();
+
+    rotateObjX();
     
+    
+}
+
+function rotateObjX(){
+    for (var i = 0; i < rotateObjXArray.length ; i++){
+        rotateObjXArray[i].rotation.x += 0.01;
+    }
     
 }
 
@@ -346,33 +382,19 @@ function twoSeconds(){
 }
 
 function showGUI(obj){
-    if (obj.name.substring(0,3) === 'box'){
-        for(var i = 0; i <= createdWorkpiece.length -1 ; i++){
-            if (obj.name === 'box' + i.toString()){
-
-                if (!workpieceGUI[i].visible){
-                    workpieceGUI[i].visible = true;
-                    workpieceGUI[i].position.y = 0.1;
-                    prevLevel = menuStep;
-                    menuStep = 0;
-                    menu();
-                } 
-            } 
+    if(obj.userData.gui.visible){
+        obj.userData.gui.visible = false;
+        obj.userData.gui.position.y = -100;
+        menuStep = prevLevel;
+        menu();
+        twoSec = false;
+    } else if (!obj.userData.gui.visble){
+        obj.userData.gui.visible = true;
+        obj.userData.gui.position.y = 0.1;
+        prevLevel = menuStep;
+        menuStep = 0;
+        menu();
     } 
-    } else if (obj.name.substring(0,3) === 'rob'){
-        for(var i = 0; i <= createdRobo.length -1 ; i++){
-            if (obj.name === 'robo' + i.toString()){
-                if (!roboGUI[i].visible){
-                    roboGUI[i].visible = true;
-                    roboGUI[i].position.y = 0.1;
-                    prevLevel = menuStep;
-                    menuStep = 0;
-                    menu();
-                } 
-            }
-            
-        }
-    }   
 }
 
 //================================= Render End ================================================
@@ -446,6 +468,9 @@ function distributeID(){
             controller1.giveID(0);
             controller2.giveID(1);
             IDdistributed = true;
+        } else if ( a === undefined){
+            controller1.giveID(0);
+            controller2.giveID(1);
         }
     }
     
@@ -633,7 +658,10 @@ function intersectObjects(controller) {
         
         var intersection = intersections[0];
         var object = intersection.object;
-        if(object.name === 'exclude') return;
+        if(object.name === 'exclude') {
+
+            return;
+        }
 
         if(object.name !== 'floor' && lastIntersected.name !== object.name){
             controller2.setVibe('bam').set(0.05).wait(50).set(0);
@@ -728,6 +756,11 @@ function handleIntersections(){
                 menuStep = 2;
                 menu();
                 return;
+            } else if (object.name === "PCD") {
+                menuStep = 0;
+                menu();
+                PCD[0].visible = true;
+                return;
             } else if (object.name === "Robot") {
                 menuStep = 2;
                 menu();
@@ -751,7 +784,9 @@ function handleIntersections(){
                     CNCState++;
                 } if ( menuStep === 4){
                     workpieceState++;
-                }
+                } if ( menuStep === 5){
+                    conveyorState++;
+                } 
                     
                 switchPick();
 
@@ -783,42 +818,18 @@ function handleIntersections(){
                 positioningModeOn = true;
                 toggleTrigger2 = false;
                 return;
-            } else if (object.name.substring(0, 3) === 'box'){
-                twoSec = true;
-                    for(var i = 0; i <= createdWorkpiece.length -1 ; i++){
-                        if (object.name === 'box' + i.toString()){
-                            twoSecObj = object;
-                            if ( workpieceGUI[i].visible){
-                                workpieceGUI[i].visible = false;
-                                workpieceGUI[i].position.y = -100;
-                                menuStep = prevLevel;
-                                menu();
-                                twoSec = false;
-                            }
-            
-                            } 
-                        } 
+            } else if (object.name === 'data'){
+                if (robo[0].userData.data.visible){
+                    robo[0].userData.data.visible = false;
+                } else {
+                robo[0].userData.data.visible = true;
                 }
-                
-                
-             else if (object.name.substring(0, 4) === 'robo'){
+                return;
+            } else if (object.name.substring(0, 3) === 'box' || object.name.substring(0, 3) === 'rob'){
                 twoSec = true;
-                for(var i = 0; i <= createdRobo.length -1 ; i++){
-                    if (object.name === 'robo' + i.toString()){
-                        twoSecObj = object;
-                        if (roboGUI[i].visible){
-                            roboGUI[i].visible = false;
-                            roboGUI[i].position.y = -100;
-                            menuStep = prevLevel;
-                            menu();
-                            twoSec = false;
-                        } 
-                    }
-                    
+                twoSecObj = object;
                 }
-                
             }
-        }
 }
 
 function positioningMode(){
@@ -833,8 +844,8 @@ function positioningMode(){
 
             if (alreadyCopied === false){
                 copyObj = pickObj.clone();
-                if(pickObj.factor !== undefined){
-                    copyObj.scale.set(1 * pickObj.factor, 1 * pickObj.factor, 1 * pickObj.factor);
+                if(pickObj.userData.factor !== undefined){
+                    copyObj.scale.set(1 * pickObj.userData.factor, 1 * pickObj.userData.factor, 1 * pickObj.userData.factor);
                 } else {
                     copyObj.scale.set(1 , 1 , 1 );
                 }
@@ -846,7 +857,6 @@ function positioningMode(){
             
             if (object.name === 'floor'){
                 copyObj.position.set(position.x, position.y, position.z);
-                //copyObj.up.set(0,1,0);
             }
             
             if( controller2.getButtonState( 'trigger') === true && toggleTrigger2 === true ){
@@ -878,6 +888,12 @@ function positioningMode(){
                 } else if ( menuStep === 4){
                     createdWorkpiece[createdWorkpieceCounter] = copyObj;
                     createdWorkpiece[createdWorkpieceCounter].name = 'box' + createdWorkpieceCounter.toString();
+                    if ( createdWorkpiece[createdWorkpieceCounter].geometry.type.substring(0,3) === 'Box' || createdWorkpiece[createdWorkpieceCounter].geometry.type.substring(0,3) === 'Cyl'){
+                        createdWorkpiece[createdWorkpieceCounter].position.y += (createdWorkpiece[createdWorkpieceCounter].geometry.parameters.height/2) * createdWorkpiece[createdWorkpieceCounter].scale.x;
+                    } else if (createdWorkpiece[createdWorkpieceCounter].geometry.type.substring(0,3) === 'Sph'){
+                        createdWorkpiece[createdWorkpieceCounter].position.y += (createdWorkpiece[createdWorkpieceCounter].geometry.parameters.radius) * createdWorkpiece[createdWorkpieceCounter].scale.x;
+                    }
+                    
                     
                     createGUI(createdWorkpiece[createdWorkpieceCounter]);
                     rayGroup.push(createdWorkpiece[createdWorkpieceCounter]);
@@ -898,107 +914,100 @@ function positioningMode(){
 }
 
 function createGUI(obj){
+
+    obj.userData.gui = dat.GUIVR.create(obj.name);
+
+    obj.userData.gui.scale.set(0.2, 0.2, 0.2);
+    obj.userData.gui.position.set(-0.1, -100, 0);
+    obj.userData.gui.rotateX(-60 * Math.PI / 180);
+    obj.userData.gui.visible = false;
+    
+    
+
+    
+
+
+    var options = {
+        position: {
+            x: obj.position.x,
+            y: obj.position.y,
+            z: obj.position.z,
+        },
+        rotation: {
+            x: obj.rotation.x,
+            y: obj.rotation.y,
+            z: obj.rotation.z
+        },
+        window: {
+            x: -0.1,
+            y: 0.1,
+            z: 0
+        },
+        color: [0, 128, 255],
+        reposition: function(){ repositionWindow(obj.userData.gui)},
+        rotateX: function(){rotatex(obj)},
+        close: function() {showGUI(obj)},
+        
+    }
+
     if( menuStep === 2){
-
-        var c = createdRoboCounter;
-        roboGUI[c] = dat.GUIVR.create(obj.name);
-
         
-        var options = {
-            position: {
-                x: obj.position.x,
-                y: obj.position.y,
-                z: obj.position.z,
-            },
-            rotation: {
-                x: obj.rotation.x,
-                y: obj.rotation.y,
-                z: obj.rotation.z
-            },
-            window: {
-                x: -0.1,
-                y: 0.1,
-                z: 0
-            },
-            reposition: function(){ repositionWindow(roboGUI[c])} 
-        }
-
-       
-        roboGUI[c].add(options.position, 'x', -floor.geometry.parameters.width/2,  floor.geometry.parameters.width/2).step(0.25).name('Position x').listen();
-        roboGUI[c].add(options.position, 'y', 0, 10).step(0.25).name('Position y').listen();
-        roboGUI[c].add(options.position, 'z', -floor.geometry.parameters.height/2,  floor.geometry.parameters.height/2).step(0.25).name('Position z').listen();
-        roboGUI[c].add(options.rotation, 'x', 0 , 2* Math.PI).step(1/360).name('Rotation x');
-        roboGUI[c].add(options.rotation, 'y', 0 , 2* Math.PI).step(1/360).name('Rotation y');
-        roboGUI[c].add(options.rotation, 'z', 0 , 2* Math.PI).step(1/360).name('Rotation z');
-        roboGUI[c].add(options, 'reposition').name('Reposition window');
-        
-
-        roboGUI[c].scale.set(0.2, 0.2, 0.2);
-        roboGUI[c].position.set(-0.1, -100, 0);
-        roboGUI[c].rotateX(-60 * Math.PI / 180);
-        roboGUI[c].visible = false;
-        controller1.add(roboGUI[c]);
-        roboGUI[c].name = 'exclude'
-        roboGUI[c].traverse( function(child){
+        obj.userData.gui.add(obj.position, 'x', -floor.geometry.parameters.width/2,  floor.geometry.parameters.width/2).step(0.25).name('Position x').listen();
+        obj.userData.gui.add(obj.position, 'y', 0, 10).step(0.25).name('Position y').listen();
+        obj.userData.gui.add(obj.position, 'z', -floor.geometry.parameters.height/2,  floor.geometry.parameters.height/2).step(0.25).name('Position z').listen();
+        obj.userData.gui.add(obj.rotation, 'x', 0 , 2* Math.PI).step(1/360).name('Rotation x');
+        obj.userData.gui.add(obj.rotation, 'y', 0 , 2* Math.PI).step(1/360).name('Rotation y');
+        obj.userData.gui.add(obj.rotation, 'z', 0 , 2* Math.PI).step(1/360).name('Rotation z');
+        obj.userData.gui.add(options, 'color',0 , 255).name('Change Color');
+        obj.userData.gui.add(options, 'reposition').name('Reposition window');
+        obj.userData.gui.traverse( function(child){
             if (child instanceof THREE.Mesh){
                 child.name = 'exclude';
             }
         });
-        rayGroup.push(roboGUI[c]);
+
+        controller1.add(obj.userData.gui);
+        obj.userData.gui.name = 'exclude';
+   
+        rayGroup.push(obj.userData.gui);
+        
+
+        
     }
     if (menuStep === 4){
-        
-        var c = createdWorkpieceCounter;
-        workpieceGUI[c] = dat.GUIVR.create(obj.name);
-
-        var options = {
-            position: {
-                x: obj.position.x,
-                y: obj.position.y,
-                z: obj.position.z,
-            },
-            rotation: {
-                x: obj.rotation.x,
-                y: obj.rotation.y,
-                z: obj.rotation.z
-            },
-            window: {
-                x: -0.1,
-                y: 0.1,
-                z: 0
-            },
-            reposition: function(){ repositionWindow(workpieceGUI[c])} 
-        }
 
 
 
-        workpieceGUI[c].add(obj.position, 'x').min(-floor.geometry.parameters.width/2).max(floor.geometry.parameters.width/2).step(0.25).name('Position x').listen();
-        workpieceGUI[c].add(obj.position, 'y').min(0).max(10).step(0.25).name('Position y').listen();
-        workpieceGUI[c].add(obj.position, 'z').min(-floor.geometry.parameters.height/2).max(floor.geometry.parameters.height/2).step(0.25).name('Position z').listen();
-        workpieceGUI[c].add(obj.rotation, 'x', 0 , 2* Math.PI).step(1/360).name('Rotation x');
-        workpieceGUI[c].add(obj.rotation, 'y', 0 , 2* Math.PI).step(1/360).name('Rotation y');
-        workpieceGUI[c].add(obj.rotation, 'z', 0 , 2* Math.PI).step(1/360).name('Rotation z');
-        workpieceGUI[c].add(obj.scale, 'x', 0.1, 5).name('Scale x');
-        workpieceGUI[c].add(obj.scale, 'y', 0.1, 5).name('Scale y');
-        workpieceGUI[c].add(obj.scale, 'z', 0.1, 5).name('Scale z');
-        workpieceGUI[c].add(options, 'reposition').name('Reposition window');
-
-        workpieceGUI[c].scale.set(0.2, 0.2, 0.2);
-        workpieceGUI[c].position.set(-0.1, -100, 0);
-        workpieceGUI[c].rotateX(-60 * Math.PI / 180);
-        workpieceGUI[c].visible = false;
-        controller1.add(workpieceGUI[c]);
-        workpieceGUI[c].name = 'exclude'
-        workpieceGUI[c].traverse( function(child){
+        obj.userData.gui.add(obj.position, 'x').min(-floor.geometry.parameters.width/2).max(floor.geometry.parameters.width/2).step(0.25).name('Position x').listen();
+        obj.userData.gui.add(obj.position, 'y').min(0).max(10).step(0.25).name('Position y').listen();
+        obj.userData.gui.add(obj.position, 'z').min(-floor.geometry.parameters.height/2).max(floor.geometry.parameters.height/2).step(0.25).name('Position z').listen();
+        obj.userData.gui.add(obj.rotation, 'x', 0 , 2* Math.PI).step(1/360).name('Rotation x');
+        obj.userData.gui.add(obj.rotation, 'y', 0 , 2* Math.PI).step(1/360).name('Rotation y');
+        obj.userData.gui.add(obj.rotation, 'z', 0 , 2* Math.PI).step(1/360).name('Rotation z');
+        obj.userData.gui.add(obj.scale, 'x', 0.1, 5).name('Scale x');
+        obj.userData.gui.add(obj.scale, 'y', 0.1, 5).name('Scale y');
+        obj.userData.gui.add(obj.scale, 'z', 0.1, 5).name('Scale z');
+        obj.userData.gui.add(options, 'reposition').name('Reposition window');
+        obj.userData.gui.add(options, 'rotateX').name('Rotation x axis');
+        obj.userData.gui.add(options, 'close').name('Close window');
+        obj.userData.gui.traverse( function(child){
             if (child instanceof THREE.Mesh){
                 child.name = 'exclude';
             }
         });
-        rayGroup.push(workpieceGUI[c]);
+
+        controller1.add(obj.userData.gui);
+        obj.userData.gui.name = 'exclude';
+   
+        rayGroup.push(obj.userData.gui);
     }
 
    function repositionWindow(gui){
         gui.position.set(options.window.x, options.window.y, options.window.z);
+   }
+
+   function rotatex(obj){
+       rotateObjXArray.push(obj);
    }
     
 }
@@ -1023,7 +1032,7 @@ function switchPick(){
     
     
                 pickObj = robo[1].clone();
-                pickObj.factor = robo[1].factor;
+                pickObj.userData = robo[1].userData;
                 
 
     
@@ -1037,7 +1046,7 @@ function switchPick(){
                 getBig(robo[2]);
     
                 pickObj = robo[2].clone();
-                pickObj.factor = robo[2].factor;
+                pickObj.userData = robo[2].userData;
                 
                 break;
             
@@ -1049,7 +1058,8 @@ function switchPick(){
                 getSmall(robo[2]);
     
                 pickObj = robo[0].clone();
-                pickObj.factor = robo[0].factor;
+                pickObj.userData = robo[0].userData;
+              
     
                 break;
         }
@@ -1062,7 +1072,7 @@ function switchPick(){
                 pickObj = CNC[0].clone();
         }
     } else if (menuStep === 4){
-        if (workpieceState === 3){
+        if (workpieceState >= 3){
             workpieceState = 0;
         }
         switch(workpieceState){
@@ -1080,12 +1090,25 @@ function switchPick(){
                 break;
         } 
     }  else if (menuStep === 5){
-        if (conveyorState === 1){
+        if (conveyorState >= 3){
             conveyorState = 0;
         }
         switch(conveyorState){
             case 0:
+                getRoundPos('conveyor');
+                pickObj = conveyor[1].clone();
+                pickObj.userData = conveyor[1].userData;
+                break;
+            case 1:
+                getRoundPos('conveyor');
+                pickObj = conveyor[2].clone();
+                pickObj.userData = conveyor[2].userData;
+                break;
+            case 2:
+                getRoundPos('conveyor');
                 pickObj = conveyor[0].clone();
+                pickObj.userData = conveyor[0].userData;
+                break;
         }
     }
     
@@ -1192,17 +1215,71 @@ function switchPick(){
                     break;  
             }
             return;
+        } else if ( string === 'conveyor'){
+            switch(conveyorState){
+                case 0:
+                    conveyor[0].position.x = roundPositions[0].position.x;
+                    conveyor[0].position.y = roundPositions[0].position.y;
+                    conveyor[0].position.z = roundPositions[0].position.z;
+                    conveyor[0].scale.set(0.05 * conveyor[0].userData.factor , 0.05 * conveyor[0].userData.factor, 0.05 * conveyor[0].userData.factor);
+        
+                    conveyor[1].position.x = roundPositions[1].position.x;
+                    conveyor[1].position.y = roundPositions[1].position.y;
+                    conveyor[1].position.z = roundPositions[1].position.z;
+                    conveyor[1].scale.set(0.12 * conveyor[1].userData.factor, 0.12* conveyor[1].userData.factor, 0.12 * conveyor[1].userData.factor);
+        
+                    conveyor[2].position.x = roundPositions[2].position.x;
+                    conveyor[2].position.y = roundPositions[2].position.y;
+                    conveyor[2].position.z = roundPositions[2].position.z;
+                    conveyor[2].scale.set(0.05 * conveyor[2].userData.factor, 0.05 * conveyor[2].userData.factor, 0.05 * conveyor[2].userData.factor);
+                        break;
+        
+                case 1: 
+                    conveyor[0].position.x = roundPositions[2].position.x;
+                    conveyor[0].position.y = roundPositions[2].position.y;
+                    conveyor[0].position.z = roundPositions[2].position.z;
+                    conveyor[0].scale.set(0.05 * conveyor[0].userData.factor, 0.05* conveyor[0].userData.factor, 0.05* conveyor[0].userData.factor);
+        
+                    conveyor[1].position.x = roundPositions[0].position.x;
+                    conveyor[1].position.y = roundPositions[0].position.y;
+                    conveyor[1].position.z = roundPositions[0].position.z;
+                    conveyor[1].scale.set(0.05 * conveyor[1].userData.factor, 0.05 * conveyor[1].userData.factor, 0.05 * conveyor[2].userData.factor);
+        
+                    conveyor[2].position.x = roundPositions[1].position.x;
+                    conveyor[2].position.y = roundPositions[1].position.y;
+                    conveyor[2].position.z = roundPositions[1].position.z;
+                    conveyor[2].scale.set(0.12 * conveyor[2].userData.factor, 0.12 * conveyor[2].userData.factor, 0.12* conveyor[2].userData.factor);
+                    break;
+                
+                case 2:
+                    conveyor[0].position.x = roundPositions[1].position.x;
+                    conveyor[0].position.y = roundPositions[1].position.y;
+                    conveyor[0].position.z = roundPositions[1].position.z;
+                    conveyor[0].scale.set(0.12* conveyor[0].userData.factor , 0.12* conveyor[0].userData.factor, 0.12* conveyor[0].userData.factor);
+        
+                    conveyor[1].position.x = roundPositions[2].position.x;
+                    conveyor[1].position.y = roundPositions[2].position.y;
+                    conveyor[1].position.z = roundPositions[2].position.z;
+                    conveyor[1].scale.set(0.05* conveyor[1].userData.factor , 0.05 * conveyor[1].userData.factor, 0.05 * conveyor[1].userData.factor);
+        
+                    conveyor[2].position.x = roundPositions[0].position.x;
+                    conveyor[2].position.y = roundPositions[0].position.y;
+                    conveyor[2].position.z = roundPositions[0].position.z;
+                    conveyor[2].scale.set(0.05 * conveyor[2].userData.factor, 0.05 * conveyor[2].userData.factor, 0.05 * conveyor[2].userData.factor);
+                    break;  
+            }
+            return
         }
         
     }
 
     function getBig(robo){
-        robo.scale.set(0.15 * robo.factor, 0.15 * robo.factor, 0.15 * robo.factor);
+        robo.scale.set(0.15 * robo.userData.factor, 0.15 * robo.userData.factor, 0.15 * robo.userData.factor);
         return;
     }
 
     function getSmall(robo){
-        robo.scale.set(0.05 * robo.factor, 0.05 * robo.factor, 0.05 * robo.factor);
+        robo.scale.set(0.05 * robo.userData.factor, 0.05 * robo.userData.factor, 0.05 * robo.userData.factor);
         return;
     }
 }
@@ -1234,13 +1311,18 @@ function initRobo(){
 
                 if ( axis === 'y'){
                     scaling(object, axis);
-                    object.scale.set(height * object.factor, height * object.factor, height * object.factor);
+                    object.scale.set(height * object.userData.factor, height * object.userData.factor, height * object.userData.factor);
                 } else if ( axis === 'z'){
                     scaling(object, axis);
-                    object.scale.set(height * object.factor, height * object.factor, height * object.factor);
+                    object.scale.set(height * object.userData.factor, height * object.userData.factor, height * object.userData.factor);
                     object.rotateX(-90 * Math.PI / 180);
                 }
                 
+                if (object.userData.axis === undefined){
+                    object.userData.axis = axis;
+                } if (object.userData.data === undefined){
+                    object.userData.data = loadData();
+                } 
                 object.rotateX(-60* Math.PI/180);
                 controller1.add(object);
                 object.position.set(0, -0.015, -0.045);
@@ -1343,7 +1425,7 @@ function initWorkpiece(){
 //============================== Conveyor ==============================================================
 
 function initConveyor(){
-    loadConveyor('CNC', 'models/dae/Conveyor/forder.dae');
+    /*loadConveyor('CNC', 'models/dae/Conveyor/forder.dae');
     function loadConveyor(name, path){
         var colladaLoader = new THREE.ColladaLoader(manager);
         var dae;
@@ -1380,7 +1462,64 @@ function initConveyor(){
         function ( error ) {
         console.log( 'An error happened' )
         })
-    }
+    } */
+
+    loadConveyor2('FB-50', 'models/js/conveyor/fb-50-ku-500-1500-2-800.js', 2, 'y');
+    loadConveyor2('FB-80', 'models/js/conveyor/fb-80-du-500-2000-3-800.js', 2, 'y');
+    loadConveyor2('FB-80', 'models/js/conveyor/fb-80-du-500-2000-3-800.js', 2, 'y');
+        
+
+    function loadConveyor2(name, path, height, axis){
+        var loader = new THREE.JSONLoader(manager);
+    
+        // load a resource
+        loader.load(
+            // resource URL
+            path,
+    
+            // onLoad callback
+            function ( geometry, material ) {
+                for ( var i = 0; i <= material.length -1; i++){
+                    material[i].morphTargets = true;
+                }
+                
+                var materials = new THREE.MeshFaceMaterial(material );
+                object = new THREE.Mesh(geometry, materials);
+                scene.add( object);
+
+                if ( axis === 'y'){
+                    scaling(object, axis);
+                    object.scale.set(height * object.userData.factor, height * object.userData.factor, height * object.userData.factor);
+                } else if ( axis === 'z'){
+                    scaling(object, axis);
+                    object.scale.set(height * object.userData.factor, height * object.userData.factor, height * object.userData.factor);
+                    object.rotateX(-90 * Math.PI / 180);
+                }
+                
+                if (object.userData.axis === undefined){
+                    object.userData.axis = axis;
+                }
+
+                object.rotateX(-60* Math.PI/180);
+                controller1.add(object);
+                object.position.set(0, -0.015, -0.045);
+                conveyor[conveyorCounter] = object;
+                conveyor[conveyorCounter].visible = false;
+                conveyor[conveyorCounter].name = name;
+                conveyorCounter++;
+                
+            },
+    
+            // onProgress callback
+            function ( xhr ) {
+                console.log( (xhr.loaded / xhr.total * 100) + '% loaded JSON' );
+            },
+    
+            // onError callback
+            function( err ) {
+                console.log( 'An error happened' );
+            });
+    };
 
 }
 
@@ -1628,6 +1767,8 @@ function menu(){
             workpiece[1].visible = false;
             workpiece[2].visible = false;
             conveyor[0].visible = false;
+            conveyor[1].visible = false;
+            conveyor[2].visible = false;
 
             break;
 
@@ -1653,6 +1794,8 @@ function menu(){
             workpiece[1].visible = false;
             workpiece[2].visible = false;
             conveyor[0].visible = false;
+            conveyor[1].visible = false;
+            conveyor[2].visible = false;
                 
             break;
 
@@ -1671,9 +1814,9 @@ function menu(){
                 robo[i].position.set(roundPositions[i].position.x, roundPositions[i].position.y, roundPositions[i].position.z);
 
                 if ( i === 1){
-                    robo[i].scale.set(0.10 * robo[i].scale.x, 0.1 * robo[i].scale.y, 0.1 * robo[i].scale.z);
+                    robo[i].scale.set(0.10 * robo[i].userData.factor, 0.1 * robo[i].userData.factor, 0.1 * robo[i].userData.factor);
                 } else {
-                    robo[i].scale.set(0.05 * robo[i].scale.x, 0.05 * robo[i].scale.y, 0.05 * robo[i].scale.z);
+                    robo[i].scale.set(0.05 * robo[i].userData.factor, 0.05 * robo[i].userData.factor, 0.05 * robo[i].userData.factor);
                 }
             }
 
@@ -1682,6 +1825,8 @@ function menu(){
             workpiece[1].visible = false;
             workpiece[2].visible = false;
             conveyor[0].visible = false;
+            conveyor[1].visible = false;
+            conveyor[2].visible = false;
             break;      
         
         case 3:
@@ -1701,6 +1846,8 @@ function menu(){
             workpiece[1].visible = false;
             workpiece[2].visible = false;
             conveyor[0].visible = false;
+            conveyor[1].visible = false;
+            conveyor[2].visible = false;
             break;
 
         case 4:
@@ -1715,6 +1862,8 @@ function menu(){
 
             CNC[0].visible = false;
             conveyor[0].visible = false;
+            conveyor[1].visible = false;
+            conveyor[2].visible = false;
 
             workpiece[0].visible = true;
             workpiece[1].visible = true;
@@ -1723,7 +1872,6 @@ function menu(){
             for (var i = 0; i <= workpiece.length -1 ; i++){
                 workpiece[i].visible = true;
                 workpiece[i].position.set(roundPositions[i].position.x, roundPositions[i].position.y, roundPositions[i].position.z);
-
             }
         
             break;
@@ -1745,6 +1893,19 @@ function menu(){
             workpiece[2].visible = false;
 
             conveyor[0].visible = true;
+            conveyor[1].visible = true;
+            conveyor[2].visible = true;
+
+            for (var i = 0; i <= workpiece.length -1 ; i++){
+                conveyor[i].visible = true;
+                conveyor[i].position.set(roundPositions[i].position.x, roundPositions[i].position.y, roundPositions[i].position.z);
+
+                if ( i === 1){
+                    conveyor[i].scale.set(0.10 *  conveyor[i].userData.factor, 0.1 *  conveyor[i].userData.factor, 0.1 *  conveyor[i].userData.factor);
+                } else {
+                    conveyor[i].scale.set(0.05 *  conveyor[i].userData.factor, 0.05 *  conveyor[i].userData.factor, 0.05 *  conveyor[i].userData.factor);
+                }
+            }
             break;
     }
 
@@ -1782,6 +1943,10 @@ function menu(){
         addSymbol('Configurator', 0.05, 0.05, 0.002, 0.005, 1, './images/symbols/mode_configurator.png');               //symbol[1][0]: configuration mode
         addSymbol('Paint', 0.05, 0.05, 0.005, 0.005, 1, './images/symbols/mode_paint.png');                      //symbol[1][1]: paint mode
         symbol[1][1].position.x += 0.1;
+        addSymbol('PCD', 0.05, 0.05, 0.005, 0.005, 1, './images/symbols/pcd.png');
+        symbol[1][2].position.z += 0.1;
+        symbol[1][2].position.y -= 0.025;
+
 
         
         controller1.add(menuLevel[1]);
@@ -1805,6 +1970,8 @@ function menu(){
 
         addSymbol('pick', 0.05, 0.05, 0.002, 0.002, 2, './images/symbols/ok.png');
         symbol[2][1].position.set(0.1, 0.05, 0.05);
+        addSymbol('data', 0.05, 0.05, 0.002, 0.002, 2, './images/symbols/data.png');
+        symbol[2][2].position.set(0, 0.02, 0.05);
       
         
 
@@ -2227,8 +2394,8 @@ function scaling(obj, axis){
             }
         }
         factor = 1/ max;
-        if ( obj.factor === undefined){
-            obj.factor = factor;
+        if ( obj.userData.factor === undefined){
+            obj.userData.factor = factor;
         }
         return obj.scale.set(factor, factor, factor);
     } else if (axis === 'z'){
@@ -2238,8 +2405,8 @@ function scaling(obj, axis){
             }
         }
         factor = 1/ max;
-        if ( obj.factor === undefined){
-            obj.factor = factor;
+        if ( obj.userData.factor === undefined){
+            obj.userData.factor = factor;
         }
         return obj.scale.set(factor, factor, factor);
     }
@@ -2271,6 +2438,10 @@ function initPCD(){
            // mesh.position.set(-0.7 , -0.15 , 2.4);
             mesh.rotateX(-90*Math.PI / 180);
             controller3.add( mesh );
+            mesh.visible = false;
+            PCD[PCDCounter] = mesh;
+
+            PCDCounter++;
 
         },
         // called when loading is in progresses
@@ -2288,6 +2459,61 @@ function initPCD(){
     );
 }
 
+function loadData(){
+    var loader = new THREE.TextureLoader(manager);
+    var geometry = new THREE.PlaneBufferGeometry(0.21, 0.297);
+    var material = new THREE.MeshBasicMaterial({
+        map: loader.load('images/data/ur5.png')
+    });
+    var mesh = new THREE.Mesh(geometry, material);
+    controller2.add(mesh);
+   // mesh.position.set(-0.3, 0, -0.2);
+   // mesh.rotateX(-60* Math.PI / 180);
+    //mesh.rotateY(30* Math.PI / 180);
+
+    mesh.position.set(0, 0.04, 0);
+    mesh.rotateX(-75* Math.PI / 180);
+    mesh.visible = false;
+    return mesh;
+}
+
+
+
+
+
+
+
+
+
+
+
+/*
+function loadFloor2(){
+    var colladaLoader = new THREE.ColladaLoader(manager);
+			
+			var dae;
+			colladaLoader.load('models/dae/robo/floor.dae', function(collada){
+				dae = collada.scene;
+				dae.traverse( function ( node ) {
+					if ( node instanceof THREE.Mesh){
+					} 
+				}); 
+
+                dae.position.set(0, 0.1, -1);
+				scene.add(dae);
+		
+			},
+			function ( xhr ) {
+			console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+			},
+
+			function ( error ) {
+			console.log( 'An error happened' )
+			})
+
+} 
+
+*/
 
 
 

@@ -1,0 +1,35 @@
+else if (object.name.substring(0, 3) === 'box'){
+                twoSec = true;
+                    for(var i = 0; i <= createdWorkpiece.length -1 ; i++){
+                        if (object.name === 'box' + i.toString()){
+                            twoSecObj = object;
+                            if ( workpieceGUI[i].visible){
+                                workpieceGUI[i].visible = false;
+                                workpieceGUI[i].position.y = -100;
+                                menuStep = prevLevel;
+                                menu();
+                                twoSec = false;
+                            }
+            
+                            } 
+                        } 
+                }
+                
+                
+             else if (object.name.substring(0, 4) === 'robo'){
+                twoSec = true;
+                for(var i = 0; i <= createdRobo.length -1 ; i++){
+                    if (object.name === 'robo' + i.toString()){
+                        twoSecObj = object;
+                        if (object.userData.gui.visible){
+                            object.userData.gui.visible = false;
+                            object.userData.gui.position.y = -100;
+                            menuStep = prevLevel;
+                            menu();
+                            twoSec = false;
+                        } 
+                    }
+                    
+                }
+                
+            }

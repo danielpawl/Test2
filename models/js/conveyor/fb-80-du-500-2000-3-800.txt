@@ -1,0 +1,14 @@
+﻿"Symbol";"Value";"Unit";
+"REFERENCE";"FB-80-DU-500-2000-3-800";"";
+"TraceParts.PartVersion";"1.0.7";"";
+"SUPPLIER";"BÖMA GmbH";"";
+"TraceParts.PartStatus";"Published";"";
+"TraceParts.PartNumber";"32-02052016-092349";"";
+"TraceParts.PartLanguage";"de";"";
+"DESIGN";"FB-80-DU - Förderband 80 mit Direktantrieb und Umlenkung";"";
+"TraceParts.InstanceId";"32-02052016-092349JYVDO0GNQYBSTUO5JLLSW7JN";"";
+"TraceParts.PartTitle";"FB-80-DU - Förderband 80 mit Direktantrieb und Umlenkung";"";
+"OMNICLASS23";"23.21.33.11";"";
+"TRACEPARTS";"TRACEPARTS";"";
+"TraceParts.PartStatusId";"";"";
+"TraceParts.ClassPath";"BOMA:32-02052016-092349";"";
