@@ -717,6 +717,8 @@
 		//bennyhill()
 		loadRobo();
 		loadRobo2();
+		blender();
+		blender2();
 		
 
 		
@@ -1257,6 +1259,50 @@
 			obj.geometry.vertices[i].z = a;
 		}
 	}
+
+	function blender(){
+			var colladaLoader = new THREE.ColladaLoader();
+			var dae;
+			colladaLoader.load('models/blender/untitled4.dae', function(collada){
+				dae = collada.scene;
+			
+				scene.add(dae);
+	
+			
+				dae.position.set(20 , 5, 250);
+		
+			},
+			function ( xhr ) {
+			console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+			},
+
+			function ( error ) {
+			console.log( 'An error happened' )
+			})
+			
+			}
+
+			function blender2(){
+			var colladaLoader = new THREE.ColladaLoader();
+			var dae;
+			colladaLoader.load('models/blender/untitled6.dae', function(collada){
+				dae = collada.scene;
+			
+				scene.add(dae);
+	
+			
+				dae.position.set(30 , 5, 250);
+		
+			},
+			function ( xhr ) {
+			console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+			},
+
+			function ( error ) {
+			console.log( 'An error happened' )
+			})
+			
+			}
 
 	window.onload = init;
 	
