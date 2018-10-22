@@ -1,0 +1,27 @@
+if (obj.name.substring(0,3) === 'box'){
+        for(var i = 0; i <= createdWorkpiece.length -1 ; i++){
+            if (obj.name === 'box' + i.toString()){
+
+                if (!workpieceGUI[i].visible){
+                    workpieceGUI[i].visible = true;
+                    workpieceGUI[i].position.y = 0.1;
+                    prevLevel = menuStep;
+                    menuStep = 0;
+                    menu();
+                } 
+            } 
+    } 
+    } else if (obj.name.substring(0,3) === 'rob'){
+        for(var i = 0; i <= createdRobo.length -1 ; i++){
+            if (obj.name === 'robo' + i.toString()){
+                if (!obj.userData.gui.visible){
+                    obj.userData.gui.visible = true;
+                    obj.userData.gui.position.y = 0.1;
+                    prevLevel = menuStep;
+                    menuStep = 0;
+                    menu();
+                } 
+            }
+            
+        }
+    }

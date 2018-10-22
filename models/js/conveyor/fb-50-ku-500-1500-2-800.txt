@@ -1,0 +1,14 @@
+﻿"Symbol";"Value";"Unit";
+"REFERENCE";"FB-50-KU-500-1500-2-800";"";
+"TraceParts.PartVersion";"1.1.0";"";
+"SUPPLIER";"BÖMA GmbH";"";
+"TraceParts.PartStatus";"Published";"";
+"TraceParts.PartNumber";"32-26042016-092416";"";
+"TraceParts.PartLanguage";"de";"";
+"DESIGN";"FB-50-KU - Förderband 50 Kopfantrieb und Umlenkung";"";
+"TraceParts.InstanceId";"32-26042016-092416E8JRAO2WCBOLG9LNDQD7KNV91";"";
+"TraceParts.PartTitle";"FB-50-KU - Förderband 50 Kopfantrieb und Umlenkung";"";
+"OMNICLASS23";"23.21.33.11";"";
+"TRACEPARTS";"TRACEPARTS";"";
+"TraceParts.PartStatusId";"";"";
+"TraceParts.ClassPath";"BOMA:32-26042016-092416";"";

@@ -24,6 +24,12 @@ THREE.ViveController = function ( id ) {
 	this.vibeChannels.prior = 0
 	
 
+	this.giveID = function (newID){
+		id = newID;
+		
+	}
+
+
 	function findGamepad( id ) {
 
 		// Iterate across gamepads as Vive Controllers may not be
@@ -35,9 +41,12 @@ THREE.ViveController = function ( id ) {
 
 			var gamepad = gamepads[ i ];
 
-			if ( gamepad && ( gamepad.id === 'OpenVR Gamepad' || gamepad.id.startsWith( 'Oculus Touch' ) || gamepad.id.startsWith( 'Spatial Controller' ) ) ) {
-
-				if ( j === id ) return gamepad;
+			if ( gamepad && ( gamepad.id === 'OpenVR Gamepad' ||  gamepad.id === 'OpenVR Tracker' || gamepad.id.startsWith( 'Oculus Touch' ) || gamepad.id.startsWith( 'Spatial Controller' ) ) ) {
+				
+				if ( j === id ) {
+                    
+                    return gamepad;
+                }
 
 				j ++;
 
@@ -55,6 +64,10 @@ THREE.ViveController = function ( id ) {
 		return gamepad;
 
 	};
+
+	function getID(id) {
+        console.log('the id is:' + id);
+    }
 
 	
 	
@@ -79,6 +92,7 @@ THREE.ViveController = function ( id ) {
 			//  Position and orientation.
 
 			var pose = gamepad.pose;
+			
 
 			if ( pose.position !== null ) scope.position.fromArray( pose.position );
 			if ( pose.orientation !== null ) scope.quaternion.fromArray( pose.orientation );

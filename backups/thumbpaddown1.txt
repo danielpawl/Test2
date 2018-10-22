@@ -1,0 +1,99 @@
+var border = 0.3
+
+    switch(menuStep){
+        case 1:
+            if ( axisX <= -border && targetNo !== symbol[menuStep][0].value ){ 
+                targetNo -= 1; 
+                menu();
+                return;
+            } 
+            if ( axisX >= border && targetNo !== symbol[menuStep][1].value){
+                targetNo += 1; 
+                menu();
+                return;
+            }
+            
+            if ( axisX <= border && axisX >= -border && axisY <= border && axisY >= -border){
+
+                if( targetNo === symbol[menuStep][0].value) {
+                    controller1.paintOff();
+                    menuStep = 2;
+                    targetNo = symbol[menuStep][0].value;
+                    menu();
+                    return;
+                }    
+                if ( targetNo === symbol[menuStep][1].value) {
+                    controller1.paintOn();
+                    menuStep = 0;
+                    menu();
+                    return;
+                }
+            }
+            break;
+
+        case 2: 
+                                                                                                                            // if( axisY >= border && menuStep < symbol[menuStep][symbolCounter[menuStep]-1].value){
+             if( axisY >= border){              
+                menuStep++;
+                targetNo = symbol[menuStep][0].value;
+                menu();
+                return;
+            } 
+            if ( axisX <= border && axisX >= -border && axisY <= border && axisY >= -border){
+
+                if( targetNo === 2) {
+                   
+                    if (axisX <= border) {
+                        robo[1].position.set(-0.1, -0.05, -0.1);
+                        robo[1].scale.set(0.05, 0.05, 0.05);
+                        robo[2].position.set(0.1, -0.05, -0.1);
+                        robo[2].scale.set(0.05, 0.05, 0.05);
+                    }
+                    return;
+                }
+            } 
+            break;
+        
+        case 3:
+            if( axisY >= border){              
+                menuStep++;
+                targetNo = symbol[menuStep][0].value;
+                menu();
+                return;
+            }
+            if( axisY <= border){
+                menuStep--;
+                targetNo = symbol[menuStep][0].value;
+                menu();
+                return;
+            }
+        
+        case 4:
+            if( axisY >= border){              
+                menuStep++;
+                targetNo = symbol[menuStep][0].value;
+                menu();
+                return;
+            }
+            if( axisY <= border){
+                menuStep--;
+                targetNo = symbol[menuStep][0].value;
+                menu();
+                return;
+            }
+        
+        case 5:
+
+            if( axisY >= border){              
+                menuStep++;
+                targetNo = symbol[menuStep][0].value;
+                menu();
+                return;
+            }
+            if( axisY <= border){
+                menuStep--;
+                targetNo = symbol[menuStep][0].value;
+                menu();
+                return;
+            }
+    } 
