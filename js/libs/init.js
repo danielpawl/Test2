@@ -59,6 +59,13 @@ var PCD = [];
 var PCDCounter = 0;
 
 
+//_________Simulation___________________
+var t;
+var simulateStatus = false;
+var started = false;
+var simulateObj = [];
+var simulateObjCounter = 0;
+
 
 var menuStep = 0;
 var prevMenuStep = 0;
@@ -187,10 +194,10 @@ function init(){
         cube.position.set(camera.position.x, 1, camera.position.z -5);
         cube.castShadow = true;
         cube.receiveShadow = true;
-        scene.add(cube);
+        //scene.add(cube);
         cube.scale.z = 1.5;
 
-        rayGroup.push(cube); 
+       // rayGroup.push(cube); 
 
         initFactory();
         excludeGroup.push('floor', 'frame');
@@ -349,7 +356,10 @@ function render(){
     twoSeconds();
 
     rotateObjX();
+  
+    handleSimulation();
     
+
     
 }
 
@@ -359,6 +369,47 @@ function rotateObjX(){
     }
     
 }
+
+var t, dt;
+
+function handleSimulation(){
+    for ( var i = 0 ; i < simulateObj.length ; i++){
+        if (simulateObj[i].userData.simulate.status === true){
+            if ( started === false){
+                started = true;
+                t = 0;
+                dt = 0.001;
+                console.log('started');
+            } else  {   //if ( t <= 1)
+                var newX = lerp(simulateObj[i].userData.simulate.start.x, simulateObj[i].userData.simulate.end.x, ease(t));   // interpolate between a and b where
+                var newY = lerp(simulateObj[i].userData.simulate.start.y, simulateObj[i].userData.simulate.end.y, ease(t));   // t is first passed through a easing
+                var newZ = lerp(simulateObj[i].userData.simulate.start.z, simulateObj[i].userData.simulate.end.z, ease(t));   // function in this example.
+                simulateObj[i].position.set(newX, newY, newZ);  // set new position
+                console.log('ding');
+                t += dt;
+                if (t <= 0 || t >=1) dt = -dt;        // ping-pong for demo
+            } /* else {
+                started === false;
+                simulateObj[i].userData.simulate.status = false;
+                t = 0;
+                console.log('ended');
+            } */
+            
+        }
+    }
+
+
+
+        
+
+    
+}
+
+function lerp(a , b , t){
+    return a + (b - a) * t;
+}
+
+function ease(t) { return t<0.5 ? 2*t*t : -1+(4-2*t)*t}
 
 function twoSeconds(){
     if( twoSec === true){
@@ -648,6 +699,8 @@ function getIntersections(controller) {
 
 function intersectObjects(controller) {
 
+    if (positioningModeOn === true) return;
+
     // Do not highlight when already selected
     if (controller.userData.selected !== undefined) return;
 
@@ -761,7 +814,23 @@ function handleIntersections(){
                 menu();
                 PCD[0].visible = true;
                 return;
-            } else if (object.name === "Robot") {
+            } else if (object.name === "Simulate") {
+                menuStep = 6;
+                menu();
+               /* var simulate = {
+                    status: false,
+                    start: {x: 0, y: 0, z: 0},
+                    end: {x: 2, y: 1, z:-10}
+                }
+                if (createdWorkpiece[0].userData.simulate === undefined){
+                    createdWorkpiece[0].userData.simulate = simulate;
+                }
+                createdWorkpiece[0].userData.simulate.status = true;
+                simulateObj.push(createdWorkpiece[0]);
+                simulateObj[0].userData.simulate.status = true; */
+
+                return;
+            }else if (object.name === "Robot") {
                 menuStep = 2;
                 menu();
                 return;
@@ -829,6 +898,8 @@ function handleIntersections(){
                 twoSec = true;
                 twoSecObj = object;
                 }
+            } else if (object.name === "Choose object"){
+                
             }
 }
 
@@ -854,7 +925,7 @@ function positioningMode(){
                 scene.add(copyObj);
                 alreadyCopied = true;
             }
-            
+            if (object.name !== 'floor') return;
             if (object.name === 'floor'){
                 copyObj.position.set(position.x, position.y, position.z);
             }
@@ -958,7 +1029,7 @@ function createGUI(obj){
         obj.userData.gui.add(obj.rotation, 'x', 0 , 2* Math.PI).step(1/360).name('Rotation x');
         obj.userData.gui.add(obj.rotation, 'y', 0 , 2* Math.PI).step(1/360).name('Rotation y');
         obj.userData.gui.add(obj.rotation, 'z', 0 , 2* Math.PI).step(1/360).name('Rotation z');
-        obj.userData.gui.add(options, 'color',0 , 255).name('Change Color');
+  
         obj.userData.gui.add(options, 'reposition').name('Reposition window');
         obj.userData.gui.traverse( function(child){
             if (child instanceof THREE.Mesh){
@@ -1907,6 +1978,25 @@ function menu(){
                 }
             }
             break;
+
+        case 6:
+            for (var i = 1; i < 6 ; i++){
+                menulevel[i].visible = false;
+            }
+            for (var i = 0; i < robo.length; i++){
+                robo[i].visible = false;
+            }
+            for (var i = 0; i < CNC.length; i++){
+                CNC[i].visible = false;
+            }
+            for (var i = 0; i < workpiece.length; i++){
+                workpiece[i].visible = false;
+            }
+            for (var i = 0; i < conveyor.length; i++){
+                conveyor[i].visible = false;
+            }
+            menulevel[6].visible = true;
+            
     }
 
 
@@ -1947,6 +2037,10 @@ function menu(){
         symbol[1][2].position.z += 0.1;
         symbol[1][2].position.y -= 0.025;
 
+        addSymbol('Simulate', 0.05, 0.05, 0.005, 0.005, 1, './images/symbols/simulate.png');
+        symbol[1][3].position.x += 0.1;
+        symbol[1][3].position.z += 0.1;
+        symbol[1][3].position.y -= 0.025;
 
         
         controller1.add(menuLevel[1]);
@@ -2024,6 +2118,14 @@ function menu(){
         for(var i = 0; i <= menuLevel.length -1 ; i++){
             rayGroup.push(menuLevel[i]);
         }
+
+
+        //_____ for simulation mode _____
+        menuLevel[6] = new THREE.Object3D();                                                            //menu for configuration mode
+        menuLevel[6].position.set(-0.1, 0 ,-0,15);
+        controller1.add(menuLevel[6]);
+        menuLevel[6].visible = false;
+        addSymbol('Choose object', 0.04, 0.04, 0.002, 0.002, 6, './images/symbols/conveyor.png');
 
         
         
