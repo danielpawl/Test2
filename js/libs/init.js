@@ -65,6 +65,7 @@ var simulateStatus = false;
 var started = false;
 var simulateObj = [];
 var simulateObjCounter = 0;
+var simulateMode = false;
 
 
 var menuStep = 0;
@@ -73,7 +74,7 @@ var text;
 var tooltip = new THREE.Object3D();
 var tooltip2 = new THREE.Object3D();
 var symbol = [];
-var symbolCounter = [0,0,0,0,0,0];
+var symbolCounter = [0,0,0,0,0,0,0];
 var menuLevel = [];
 var menuCreated = false;
 
@@ -358,6 +359,7 @@ function render(){
     rotateObjX();
   
     handleSimulation();
+    SimulatePoints();
     
 
     
@@ -380,23 +382,26 @@ function handleSimulation(){
                 t = 0;
                 dt = 0.001;
                 console.log('started');
-            } else  {   //if ( t <= 1)
+            } else if ( t <= 1) {
                 var newX = lerp(simulateObj[i].userData.simulate.start.x, simulateObj[i].userData.simulate.end.x, ease(t));   // interpolate between a and b where
                 var newY = lerp(simulateObj[i].userData.simulate.start.y, simulateObj[i].userData.simulate.end.y, ease(t));   // t is first passed through a easing
                 var newZ = lerp(simulateObj[i].userData.simulate.start.z, simulateObj[i].userData.simulate.end.z, ease(t));   // function in this example.
                 simulateObj[i].position.set(newX, newY, newZ);  // set new position
                 console.log('ding');
-                t += dt;
-                if (t <= 0 || t >=1) dt = -dt;        // ping-pong for demo
-            } /* else {
-                started === false;
+                
+               // if (t <= 0 || t >=1) dt = -dt;        // ping-pong for demo
+            } else {
                 simulateObj[i].userData.simulate.status = false;
-                t = 0;
                 console.log('ended');
-            } */
+                if ( i === simulateObj.length -1) {
+                    t = 0;
+                    started = false;
+                }
+            } 
             
         }
     }
+    t += dt;
 
 
 
@@ -593,6 +598,7 @@ function onGripsUp1(){
 
 function onMenuDown1(){
     menuStep = 1;
+    simulateMode = false;
     menu();
 }
 
@@ -796,111 +802,180 @@ function handleIntersections(){
 		if (intersections.length > 0) {
 			var intersection = intersections[0];
 			var object = intersection.object;
-			var point = intersection.point;
-
-			if (object.name === "Paint"){
-                controller1.paintOn();
-                menuStep = 0;
-                menu();
-                return;
-            }
+            var point = intersection.point;
             
-			else if (object.name === "Configurator") {
-                menuStep = 2;
-                menu();
-                return;
-            } else if (object.name === "PCD") {
-                menuStep = 0;
-                menu();
-                PCD[0].visible = true;
-                return;
-            } else if (object.name === "Simulate") {
-                menuStep = 6;
-                menu();
-               /* var simulate = {
-                    status: false,
-                    start: {x: 0, y: 0, z: 0},
-                    end: {x: 2, y: 1, z:-10}
+            if (!simulateMode){
+                if (object.name === "Paint"){
+                    controller1.paintOn();
+                    menuStep = 0;
+                    menu();
+                    return;
                 }
-                if (createdWorkpiece[0].userData.simulate === undefined){
-                    createdWorkpiece[0].userData.simulate = simulate;
-                }
-                createdWorkpiece[0].userData.simulate.status = true;
-                simulateObj.push(createdWorkpiece[0]);
-                simulateObj[0].userData.simulate.status = true; */
-
-                return;
-            }else if (object.name === "Robot") {
-                menuStep = 2;
-                menu();
-                return;
-            } else if (object.name === "CNC") {
-                menuStep = 3;
-                menu();
-                return;
-            } else if (object.name === "Workpiece") {
-                menuStep = 4;
-                menu();
-                return;
-            } else if (object.name === "Conveyor") {
-                menuStep = 5;
-                menu();
-                return;
-            } else if (object.name === 'next'){
-                if (menuStep === 2){
-                    roboState++;
-                } if (menuStep === 3){
-                    CNCState++;
-                } if ( menuStep === 4){
-                    workpieceState++;
-                } if ( menuStep === 5){
-                    conveyorState++;
-                } 
-                    
-                switchPick();
-
-                return;
-
-            } else if (object.name === 'previous'){
-                roboState--;
-                switchPick();
-
-                return;
-
-            } else if (object.name === 'pick'){
-                controller2.add(pickObj);
-                pickObj.position.set(roundPositions[1].position.x, roundPositions[1].position.y, roundPositions[1].position.z);
-                pickObj.traverse( function ( node ) {
-                    if ( node instanceof THREE.Mesh){
-                        if (node.material.length > 0){
-                            for (var i = 0; i <= node.material.length -1 ; i++){
-                                node.material[i].transparent = true;
-                                node.material[i].opacity = 0.5;
-                            }
-                        } else {
-                            node.material.transparent = true;
-                            node.material.opacity = 0.5;
-                        }
-                    }
-                });
-
-                positioningModeOn = true;
-                toggleTrigger2 = false;
-                return;
-            } else if (object.name === 'data'){
-                if (robo[0].userData.data.visible){
-                    robo[0].userData.data.visible = false;
-                } else {
-                robo[0].userData.data.visible = true;
-                }
-                return;
-            } else if (object.name.substring(0, 3) === 'box' || object.name.substring(0, 3) === 'rob'){
-                twoSec = true;
-                twoSecObj = object;
-                }
-            } else if (object.name === "Choose object"){
                 
+                else if (object.name === "Configurator") {
+                    menuStep = 2;
+                    menu();
+                    return;
+                } else if (object.name === "PCD") {
+                    menuStep = 0;
+                    menu();
+                    PCD[0].visible = true;
+                    return;
+                } else if (object.name === "Simulate") {
+                    menuStep = 6;
+                    simulateMode = true;
+                    menu();
+                   /* var simulate = {
+                        status: false,
+                        start: {x: 0, y: 0, z: 0},
+                        end: {x: 2, y: 1, z:-10}
+                    }
+                    if (createdWorkpiece[0].userData.simulate === undefined){
+                        createdWorkpiece[0].userData.simulate = simulate;
+                    }
+                    createdWorkpiece[0].userData.simulate.status = true;
+                    simulateObj.push(createdWorkpiece[0]);
+                    simulateObj[0].userData.simulate.status = true; */
+    
+                    return;
+                }else if (object.name === "Robot") {
+                    menuStep = 2;
+                    menu();
+                    return;
+                } else if (object.name === "CNC") {
+                    menuStep = 3;
+                    menu();
+                    return;
+                } else if (object.name === "Workpiece") {
+                    menuStep = 4;
+                    menu();
+                    return;
+                } else if (object.name === "Conveyor") {
+                    menuStep = 5;
+                    menu();
+                    return;
+                } else if (object.name === 'next'){
+                    if (menuStep === 2){
+                        roboState++;
+                    } if (menuStep === 3){
+                        CNCState++;
+                    } if ( menuStep === 4){
+                        workpieceState++;
+                    } if ( menuStep === 5){
+                        conveyorState++;
+                    } 
+                        
+                    switchPick();
+    
+                    return;
+    
+                } else if (object.name === 'previous'){
+                    roboState--;
+                    switchPick();
+    
+                    return;
+    
+                } else if (object.name === 'pick'){
+                    controller2.add(pickObj);
+                    pickObj.position.set(roundPositions[1].position.x, roundPositions[1].position.y, roundPositions[1].position.z);
+                    pickObj.traverse( function ( node ) {
+                        if ( node instanceof THREE.Mesh){
+                            if (node.material.length > 0){
+                                for (var i = 0; i <= node.material.length -1 ; i++){
+                                    node.material[i].transparent = true;
+                                    node.material[i].opacity = 0.5;
+                                }
+                            } else {
+                                node.material.transparent = true;
+                                node.material.opacity = 0.5;
+                            }
+                        }
+                    });
+    
+                    positioningModeOn = true;
+                    toggleTrigger2 = false;
+                    return;
+                } else if (object.name === 'data'){
+                    if (robo[0].userData.data.visible){
+                        robo[0].userData.data.visible = false;
+                    } else {
+                    robo[0].userData.data.visible = true;
+                    }
+                    return;
+                } else if (object.name.substring(0, 3) === 'box' || object.name.substring(0, 3) === 'rob'){
+                    twoSec = true;
+                    twoSecObj = object;
+                    }
+            } else if (simulateMode){
+                if (object.name === "Choose"){
+                    simulateChoose = true;
+                    return;
+                } else if (object.name === 'Play'){
+                    for ( var i = 0 ; i < simulateObj.length ; i++){
+                        simulateObj[i].userData.simulate.status = true;
+                    }
+                }
+                
+                if (simulateChoose){
+                    toggleTrigger2 = false;
+                    simulateChoose = false;
+                    setStartPoint = true;
+                    var simulate = {
+                        status: false,
+                        start: {x: 0, y: 0, z: 0},
+                        end: {x: 2, y: 1, z:-10}
+                    }
+                    if (object.userData.simulate === undefined){
+                        object.userData.simulate = simulate;
+                    }
+                    simObj = object;
+                }
+
             }
+
+			
+            } 
+}
+
+var geometry = new THREE.SphereBufferGeometry(0.05, 32, 32);
+var material = new THREE.MeshBasicMaterial({});
+var simuSphere = new THREE.Mesh(geometry, material);
+controller2.add(simuSphere);
+var setStartPoint = false;
+var setEndPoint = false;
+var simulateChoose = false;
+simuSphere.visible = false;
+var simObj = new THREE.Object3D();
+
+function SimulatePoints(){
+    
+    if (setStartPoint === true){
+        simuSphere.visible = true;
+        if( controller2.getButtonState( 'trigger') === true && toggleTrigger2 === true ){
+            var vector = new THREE.Vector3();
+            vector.setFromMatrixPosition(controller2.matrixWorld);
+            
+            simObj.userData.simulate.start.x = vector.x;
+            simObj.userData.simulate.start.y = vector.y;
+            simObj.userData.simulate.start.z = vector.z;
+            setStartPoint = false;
+            setEndPoint = true;
+            toggleTrigger2 = false;
+        }
+    } else if(setEndPoint === true) {
+        if ( controller2.getButtonState( 'trigger') === true && toggleTrigger2 === true ){
+            var vector = new THREE.Vector3();
+            vector.setFromMatrixPosition(controller2.matrixWorld);
+            
+            simObj.userData.simulate.end.x = vector.x;
+            simObj.userData.simulate.end.y = vector.y;
+            simObj.userData.simulate.end.z = vector.z;
+            setEndPoint = false;
+    
+            simuSphere.visible = false;
+            simulateObj.push(simObj);
+        }
+    }
 }
 
 function positioningMode(){
@@ -1364,6 +1439,7 @@ function initRobo(){
 
     function loadRobo(name, path, height, axis){
         var loader = new THREE.JSONLoader(manager);
+        var textureLoader = new THREE.TextureLoader(manager);
     
         // load a resource
         loader.load(
@@ -1374,6 +1450,7 @@ function initRobo(){
             function ( geometry, material ) {
                 for ( var i = 0; i <= material.length -1; i++){
                     material[i].morphTargets = true;
+                    material[i].morphNormals = true;
                 }
                 
                 var materials = new THREE.MeshFaceMaterial(material );
@@ -1826,6 +1903,7 @@ function menu(){
             menuLevel[3].visible = false;
             menuLevel[4].visible = false;
             menuLevel[5].visible = false;
+            menuLevel[6].visible = false;
 
             tooltip.visible = false;
             tooltip2.visible = false;
@@ -1840,6 +1918,7 @@ function menu(){
             conveyor[0].visible = false;
             conveyor[1].visible = false;
             conveyor[2].visible = false;
+            
 
             break;
 
@@ -1849,6 +1928,7 @@ function menu(){
             menuLevel[3].visible = false;
             menuLevel[4].visible = false;
             menuLevel[5].visible = false;
+            menuLevel[6].visible = false;
             
             if('undefined' !== typeof text){
                 tooltip.visible = true;
@@ -1876,6 +1956,7 @@ function menu(){
             menuLevel[3].visible = true;
             menuLevel[4].visible = true;
             menuLevel[5].visible = true;
+            menuLevel[6].visible = false;
 
             tooltip.visible = true;
             tooltip2.visible = true;
@@ -1927,6 +2008,7 @@ function menu(){
             menuLevel[3].visible = true;
             menuLevel[4].visible = true;
             menuLevel[5].visible = true;
+            menuLevel[6].visible = false;
             for (var i = 0; i <= robo.length -1 ; i++){
                 robo[i].visible = false;
             }
@@ -1953,6 +2035,7 @@ function menu(){
             menuLevel[3].visible = true;
             menuLevel[4].visible = true;
             menuLevel[5].visible = true;
+            menuLevel[6].visible = false;
             for (var i = 0; i <= robo.length -1 ; i++){
                 robo[i].visible = false;
             }
@@ -1981,7 +2064,7 @@ function menu(){
 
         case 6:
             for (var i = 1; i < 6 ; i++){
-                menulevel[i].visible = false;
+                menuLevel[i].visible = false;
             }
             for (var i = 0; i < robo.length; i++){
                 robo[i].visible = false;
@@ -1995,7 +2078,7 @@ function menu(){
             for (var i = 0; i < conveyor.length; i++){
                 conveyor[i].visible = false;
             }
-            menulevel[6].visible = true;
+            menuLevel[6].visible = true;
             
     }
 
@@ -2115,9 +2198,7 @@ function menu(){
         symbol[5][0].rotateX(30*Math.PI /180);
         
         
-        for(var i = 0; i <= menuLevel.length -1 ; i++){
-            rayGroup.push(menuLevel[i]);
-        }
+        
 
 
         //_____ for simulation mode _____
@@ -2125,8 +2206,15 @@ function menu(){
         menuLevel[6].position.set(-0.1, 0 ,-0,15);
         controller1.add(menuLevel[6]);
         menuLevel[6].visible = false;
-        addSymbol('Choose object', 0.04, 0.04, 0.002, 0.002, 6, './images/symbols/conveyor.png');
+        
+        addSymbol('Choose', 0.04, 0.04, 0.002, 0.002, 6, './images/symbols/cursor.png');
+        symbol[6][0].position.set(0.1, 0.05, 0.05);
+        addSymbol('Play', 0.04, 0.04, 0.002, 0.002, 6, './images/symbols/simulate.png');
+        symbol[6][1].position.set(0.05, 0.05, 0.05);
 
+        for(var i = 0; i <= menuLevel.length -1 ; i++){
+            rayGroup.push(menuLevel[i]);
+        }
         
         
         createArrowButtons();                                                                           //arrow symbols
