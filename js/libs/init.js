@@ -175,19 +175,19 @@ function init(){
        
        var point = new THREE.DirectionalLight(0xffffff, 0.5);
         point.castShadow = true;
-        point.shadow.camera.top = 2;
-        point.shadow.camera.bottom = -2;
-        point.shadow.camera.right = 2;
-        point.shadow.camera.left = -2;
+        point.shadow.camera.top = 30;
+        point.shadow.camera.bottom = -30;
+        point.shadow.camera.right = 30;
+        point.shadow.camera.left = -30;
         point.shadow.mapSize.set( 4096, 4096 );
         point.shadow.mapSize.set( 4096, 4096 );
         point.shadow.bias = -0.0001;
         scene.add(point);
-        point.position.set(0, 100, 0);
+        point.position.set(0, 50, 30);
         
         
         var cubeGeo = new THREE.BoxBufferGeometry(2,2,2);
-        var cubeMat = new THREE.MeshStandardMaterial({
+        var cubeMat = new THREE.MeshPhongMaterial({
             color: 0x00ff00,
             roughness: 0
         });
@@ -195,10 +195,10 @@ function init(){
         cube.position.set(camera.position.x, 1, camera.position.z -5);
         cube.castShadow = true;
         cube.receiveShadow = true;
-        //scene.add(cube);
+        scene.add(cube);
         cube.scale.z = 1.5;
 
-       // rayGroup.push(cube); 
+        rayGroup.push(cube); 
 
         initFactory();
         excludeGroup.push('floor', 'frame');
@@ -991,13 +991,25 @@ function positioningMode(){
             if (alreadyCopied === false){
                 copyObj = pickObj.clone();
                 if(pickObj.userData.factor !== undefined){
-                    copyObj.scale.set(1 * pickObj.userData.factor, 1 * pickObj.userData.factor, 1 * pickObj.userData.factor);
+                    if (copyObj.userData.realHeight !== undefined){
+                        copyObj.scale.set(copyObj.userData.realHeight * copyObj.userData.factor , copyObj.userData.realHeight * copyObj.userData.factor , copyObj.userData.realHeight * copyObj.userData.factor);
+                    } else {
+                        copyObj.scale.set(1 * pickObj.userData.factor, 1 * pickObj.userData.factor, 1 * pickObj.userData.factor);
+                    }
+                    
                 } else {
-                    copyObj.scale.set(1 , 1 , 1 );
+                        copyObj.scale.set(1 , 1 , 1 );
+                    }
+                    
+                if (copyObj.userData.axis === 'y'){
+                    copyObj.lookAt(0, 0, 1);
+                } else {
+                    copyObj.lookAt(0, 1, 0);
                 }
-                
-                copyObj.lookAt(0, 0, 1);
+              
                 scene.add(copyObj);
+                copyObj.castShadow = true;
+                copyObj.receiveShadow = true;
                 alreadyCopied = true;
             }
             if (object.name !== 'floor') return;
@@ -1012,10 +1024,12 @@ function positioningMode(){
                             for (var i = 0; i <= node.material.length -1 ; i++){
                                 node.material[i].transparent = false;
                                 node.material[i].opacity = 1
+                                node.receiveShadow = true;
                             }
                         } else {
                             node.material.transparent = false;
                             node.material.opacity = 1;
+                            node.receiveShadow = true;
                         }
                     }
                 });
@@ -1432,9 +1446,9 @@ function switchPick(){
 
 //============================== Robo =================================================================
 function initRobo(){
-    loadRobo('U3', 'models/js/robo/ur3.js', 2, 'y');
-    loadRobo('TX200', 'models/js/robo/tx200.js', 2, 'z');
-    loadRobo('Ts80','models/js/robo/ts80.js', 2, 'z' );
+    loadRobo('UR3', 'models/js/robo/ur3.js', 700, 'y');
+    loadRobo('TX200', 'models/js/robo/tx200.js', 2194, 'z');
+    loadRobo('Ts80','models/js/robo/ts80.js', 1000, 'z' );
         
 
     function loadRobo(name, path, height, axis){
@@ -1457,12 +1471,14 @@ function initRobo(){
                 object = new THREE.Mesh(geometry, materials);
                 scene.add( object);
 
+                var h = height/ 1000;
+
                 if ( axis === 'y'){
                     scaling(object, axis);
-                    object.scale.set(height * object.userData.factor, height * object.userData.factor, height * object.userData.factor);
+                    object.scale.set(h * object.userData.factor, h * object.userData.factor, h * object.userData.factor);
                 } else if ( axis === 'z'){
                     scaling(object, axis);
-                    object.scale.set(height * object.userData.factor, height * object.userData.factor, height * object.userData.factor);
+                    object.scale.set(h * object.userData.factor, h * object.userData.factor, h * object.userData.factor);
                     object.rotateX(-90 * Math.PI / 180);
                 }
                 
@@ -1470,6 +1486,10 @@ function initRobo(){
                     object.userData.axis = axis;
                 } if (object.userData.data === undefined){
                     object.userData.data = loadData();
+                } if (object.userData.realHeight === undefined){
+                    object.userData.realHeight = h;
+                } if (object.userData.axis === undefined){
+                    object.userData.axis = axis;
                 } 
                 object.rotateX(-60* Math.PI/180);
                 controller1.add(object);
@@ -1497,27 +1517,33 @@ function initRobo(){
 
 //========================== CNC =========================================================================
 function initCNC(){
-    loadCNC('CNC', 'models/dae/CNC/CNC.dae');
-    function loadCNC(name, path){
+    loadCNC('CNC', 'models/dae/CNC/CNC.dae', 2000,'z');
+
+    function loadCNC(name, path, height,axis){
+
         var colladaLoader = new THREE.ColladaLoader(manager);
-        var dae;
+        var object;
         colladaLoader.load(path, function(collada){
-            dae = collada.scene;
-            dae.traverse( function ( node ) {
+            object = collada.scene;
+            object.traverse( function ( node ) {
                 if ( node instanceof THREE.Mesh){
                     node.castShadow = true;
                     node.material.flatShading = true;
                     
                 } 
             }); 
-
-            scene.add(dae);
-            controller1.add(dae);
-            dae.scale.set(0.05 , 0.05, 0.05);
             
-            dae.position.set(0, -0.015, -0.045);
-            dae.rotateX(-60* Math.PI/180);
-            CNC[CNCCounter] = dae;
+
+            if (object.userData.axis === undefined){
+                object.userData.axis = axis;
+            } 
+
+            scene.add(object);
+            controller1.add(object);
+            object.scale.set(0.5, 0.5, 0.5);
+            object.position.set(0, -0.015, -0.045);
+            object.rotateX(-60* Math.PI/180);
+            CNC[CNCCounter] = object;
             CNC[CNCCounter].visible = false;
             CNC[CNCCounter].name = name;
             CNCCounter++;
@@ -1612,9 +1638,9 @@ function initConveyor(){
         })
     } */
 
-    loadConveyor2('FB-50', 'models/js/conveyor/fb-50-ku-500-1500-2-800.js', 2, 'y');
-    loadConveyor2('FB-80', 'models/js/conveyor/fb-80-du-500-2000-3-800.js', 2, 'y');
-    loadConveyor2('FB-80', 'models/js/conveyor/fb-80-du-500-2000-3-800.js', 2, 'y');
+    loadConveyor2('FB-50', 'models/js/conveyor/fb-50-ku-500-1500-2-800.js', 800, 'y');
+    loadConveyor2('FB-80', 'models/js/conveyor/fb-80-du-500-2000-3-800.js', 800, 'y');
+    loadConveyor2('FB-80', 'models/js/conveyor/fb-80-du-500-2000-3-800.js', 800, 'y');
         
 
     function loadConveyor2(name, path, height, axis){
@@ -1635,18 +1661,24 @@ function initConveyor(){
                 object = new THREE.Mesh(geometry, materials);
                 scene.add( object);
 
+                var h = height/ 1000;
+
                 if ( axis === 'y'){
                     scaling(object, axis);
-                    object.scale.set(height * object.userData.factor, height * object.userData.factor, height * object.userData.factor);
+                    object.scale.set(h * object.userData.factor, h * object.userData.factor, h * object.userData.factor);
                 } else if ( axis === 'z'){
                     scaling(object, axis);
-                    object.scale.set(height * object.userData.factor, height * object.userData.factor, height * object.userData.factor);
+                    object.scale.set(h * object.userData.factor, h * object.userData.factor, h * object.userData.factor);
                     object.rotateX(-90 * Math.PI / 180);
                 }
                 
                 if (object.userData.axis === undefined){
                     object.userData.axis = axis;
-                }
+                } if (object.userData.realHeight === undefined){
+                    object.userData.realHeight = h;
+                } if (object.userData.axis === undefined){
+                    object.userData.axis = axis;
+                } 
 
                 object.rotateX(-60* Math.PI/180);
                 controller1.add(object);
