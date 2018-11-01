@@ -18,9 +18,10 @@ var twoSec = false;
 var twoSecTimer = new THREE.Clock();
 var twoSecStarted = false;
 var twoSecObj;
+var doubleClick = {status: false, object: new THREE.Object3D(), clock: new THREE.Clock(), started: false, success: false};
+var guiAlreadyOpened = {status: false, objectGUI: 0};
 
 
-var robotest;
 
 
 var rayGeo, raycaster;
@@ -195,10 +196,10 @@ function init(){
         cube.position.set(camera.position.x, 1, camera.position.z -5);
         cube.castShadow = true;
         cube.receiveShadow = true;
-        scene.add(cube);
+        //scene.add(cube);
         cube.scale.z = 1.5;
 
-        rayGroup.push(cube); 
+        //rayGroup.push(cube); 
 
         initFactory();
         excludeGroup.push('floor', 'frame');
@@ -314,7 +315,7 @@ function render(){
     intersectObjects(controller2);
     //cleanIntersected();
 
-    if(clock.getElapsedTime() >= 5){
+    if(clock.getElapsedTime() >= 10){
         for (var i = 0; i <= robo.length -1 ; i++){
             if (robo[i] !== undefined){
                 if (robo[i].userData.axis === 'y'){
@@ -344,9 +345,7 @@ function render(){
             }
         }
 
-
         CNC[0].rotation.z += 0.01;
-        workpiece[0].rotation.y += 0.01;
     };
 
     var count = paintLine.geometry.drawRange.count;
@@ -355,6 +354,7 @@ function render(){
     positioningMode();
 
     twoSeconds();
+    doubleClickF();
 
     rotateObjX();
   
@@ -363,6 +363,30 @@ function render(){
     
 
     
+}
+
+function doubleClickF(){
+    if (doubleClick.status === true){
+        if (doubleClick.started === false){
+            doubleClick.clock.start();
+            doubleClick.started = true;
+        }
+
+        if (doubleClick.success === true){
+            showGUI(doubleClick.object);
+            doubleClick.status = false;
+            doubleClick.clock.stop();
+            doubleClick.started = false;
+            doubleClick.object = 0;
+            doubleClick.success = false;
+        } else if (doubleClick.clock.getElapsedTime() >= 1){
+            doubleClick.status = false;
+            doubleClick.clock.stop();
+            doubleClick.started = false;
+            doubleClick.object = 0;
+        }
+       
+    }
 }
 
 function rotateObjX(){
@@ -425,7 +449,7 @@ function twoSeconds(){
         }
         
         if (twoSecTimer.getElapsedTime() >= 2){
-            showGUI(twoSecObj);
+            dragStart(twoSecObj, controller2);
             twoSecStarted = false;
             twoSec = false;
         }
@@ -438,18 +462,29 @@ function twoSeconds(){
 }
 
 function showGUI(obj){
+    
     if(obj.userData.gui.visible){
         obj.userData.gui.visible = false;
         obj.userData.gui.position.y = -100;
         menuStep = prevLevel;
         menu();
-        twoSec = false;
+        guiAlreadyOpened.status = false;
+        guiAlreadyOpened.objectGUI = 0;
+
     } else if (!obj.userData.gui.visble){
+        if (guiAlreadyOpened.status === true){
+            guiAlreadyOpened.objectGUI.visible = false;
+            guiAlreadyOpened.objectGUI.position.y = -100;
+            menuStep = prevLevel;
+        }
         obj.userData.gui.visible = true;
         obj.userData.gui.position.y = 0.1;
         prevLevel = menuStep;
         menuStep = 0;
         menu();
+
+        guiAlreadyOpened.status = true;
+        guiAlreadyOpened.objectGUI = obj.userData.gui;
     } 
 }
 
@@ -626,6 +661,9 @@ function onTriggerUp2(){
     input.pressed(false);
     toggleTrigger2 = true;
     twoSec = false;
+    if (controller2.userData.selected !== undefined) {
+		dragStop(controller2);
+	}
 }
 
 function onAxisChanged2(a){
@@ -803,7 +841,17 @@ function handleIntersections(){
 			var intersection = intersections[0];
 			var object = intersection.object;
             var point = intersection.point;
-            
+
+            if( object.userData.gui !== undefined){
+                if (doubleClick.object === object){
+                    doubleClick.success = true;
+                } else {
+                    doubleClick.status = true;
+                    doubleClick.object = object;
+                }
+  
+            }
+
             if (!simulateMode){
                 if (object.name === "Paint"){
                     controller1.paintOn();
@@ -1082,11 +1130,6 @@ function createGUI(obj){
     obj.userData.gui.rotateX(-60 * Math.PI / 180);
     obj.userData.gui.visible = false;
     
-    
-
-    
-
-
     var options = {
         position: {
             x: obj.position.x,
@@ -1103,14 +1146,15 @@ function createGUI(obj){
             y: 0.1,
             z: 0
         },
-        color: [0, 128, 255],
+        color: '#ffffff',
         reposition: function(){ repositionWindow(obj.userData.gui)},
         rotateX: function(){rotatex(obj)},
         close: function() {showGUI(obj)},
         
     }
+        
 
-    if( menuStep === 2){
+    if( menuStep === 2 || menuStep === 3 || menuStep === 5){
         
         obj.userData.gui.add(obj.position, 'x', -floor.geometry.parameters.width/2,  floor.geometry.parameters.width/2).step(0.25).name('Position x').listen();
         obj.userData.gui.add(obj.position, 'y', 0, 10).step(0.25).name('Position y').listen();
@@ -1133,10 +1177,7 @@ function createGUI(obj){
         
 
         
-    }
-    if (menuStep === 4){
-
-
+    } else if (menuStep === 4){
 
         obj.userData.gui.add(obj.position, 'x').min(-floor.geometry.parameters.width/2).max(floor.geometry.parameters.width/2).step(0.25).name('Position x').listen();
         obj.userData.gui.add(obj.position, 'y').min(0).max(10).step(0.25).name('Position y').listen();
@@ -1147,6 +1188,7 @@ function createGUI(obj){
         obj.userData.gui.add(obj.scale, 'x', 0.1, 5).name('Scale x');
         obj.userData.gui.add(obj.scale, 'y', 0.1, 5).name('Scale y');
         obj.userData.gui.add(obj.scale, 'z', 0.1, 5).name('Scale z');
+
         obj.userData.gui.add(options, 'reposition').name('Reposition window');
         obj.userData.gui.add(options, 'rotateX').name('Rotation x axis');
         obj.userData.gui.add(options, 'close').name('Close window');
@@ -1158,9 +1200,9 @@ function createGUI(obj){
 
         controller1.add(obj.userData.gui);
         obj.userData.gui.name = 'exclude';
-   
         rayGroup.push(obj.userData.gui);
-    }
+
+    } 
 
    function repositionWindow(gui){
         gui.position.set(options.window.x, options.window.y, options.window.z);
@@ -1462,12 +1504,14 @@ function initRobo(){
     
             // onLoad callback
             function ( geometry, material ) {
+                var newMat = [];
                 for ( var i = 0; i <= material.length -1; i++){
+                    newMat[i] = new THREE.MeshStandardMaterial();
                     material[i].morphTargets = true;
-                    material[i].morphNormals = true;
+                    newMat[i].color = material[i].color;
                 }
                 
-                var materials = new THREE.MeshFaceMaterial(material );
+                var materials = new THREE.MeshFaceMaterial(newMat );
                 object = new THREE.Mesh(geometry, materials);
                 scene.add( object);
 
@@ -1497,9 +1541,9 @@ function initRobo(){
                 robo[roboCounter] = object;
                 robo[roboCounter].visible = false;
                 robo[roboCounter].name = name;
+                robo[roboCounter].receiveShadow = true;
                 roboCounter++;
                 
-                robotest = object;
             },
     
             // onProgress callback
@@ -1546,6 +1590,7 @@ function initCNC(){
             CNC[CNCCounter] = object;
             CNC[CNCCounter].visible = false;
             CNC[CNCCounter].name = name;
+            CNC[CNCCounter].receiveShadow = true;
             CNCCounter++;
 
 
@@ -1565,36 +1610,31 @@ function initCNC(){
 //========================== Workpiece ===================================================================
 
 function initWorkpiece(){
-    var loader = new THREE.TextureLoader(manager);
-    var geometry = new THREE.BoxBufferGeometry(0.5, 0.5, 0.5);
-    
-    var material = new THREE.MeshPhongMaterial({
+    var material = new THREE.MeshStandardMaterial({
         color: 0x207e27,
-        metalness: 0.7,
-        roughness: 0.0
+        metalness: 0.5,
+        roughness: 0.5
     })
-    workpiece[0] = new THREE.Mesh(geometry, material);
-    controller1.add(workpiece[0]);
-    workpiece[0].scale.set(0.1 , 0.1, 0.1);
-    workpiece[0].position.set(0, -0.015, -0.06);
-    workpiece[0].rotateX(-60 * Math.PI / 180);
-    workpiece[0].visible = false;
 
+    var geometry = [];
+    geometry[0] = new THREE.BoxBufferGeometry(0.5, 0.5, 0.5);
+    geometry[1] = new THREE.SphereBufferGeometry(0.3, 32, 32);
+    geometry[2] = new THREE.CylinderBufferGeometry( 0.3, 0.3, 0.3, 32 );
+  
 
-    var geometry = new THREE.SphereBufferGeometry(0.3, 32, 32);
-    workpiece [1] = new THREE.Mesh(geometry, material);
-    controller1.add(workpiece[1]);
-    workpiece[1].scale.set(0.1 , 0.1, 0.1);
-    workpiece[1].position.set(0, -0.015, -0.06);
-    workpiece[1].visible = false;
+    for (var i = 0; i < geometry.length; i++){
+        workpiece[i] = new THREE.Mesh(geometry[i], material);
+        workpiece[i].scale.set(0.1, 0.1, 0.1);
+        workpiece[i].position.set(0, -0.015, -0.06);
+        workpiece[i].visible = false;
+        controller1.add(workpiece[i]);
 
+        if ( i === 0){
+            workpiece[i].rotateX(-60 * Math.PI / 180);
+        }
+        
+    }
 
-    var geometry = new THREE.CylinderBufferGeometry( 0.3, 0.3, 0.3, 32 );
-    workpiece[2] = new THREE.Mesh( geometry, material );
-    controller1.add(workpiece[2]);
-    workpiece[2].scale.set(0.1 , 0.1, 0.1);
-    workpiece[2].position.set(0, -0.015, -0.06);
-    workpiece[2].visible = false;
     }
 //============================== Conveyor ==============================================================
 
@@ -1653,11 +1693,14 @@ function initConveyor(){
     
             // onLoad callback
             function ( geometry, material ) {
+                var newMat = [];
                 for ( var i = 0; i <= material.length -1; i++){
+                    newMat[i] = new THREE.MeshStandardMaterial();
                     material[i].morphTargets = true;
+                    newMat[i].color = material[i].color;
                 }
                 
-                var materials = new THREE.MeshFaceMaterial(material );
+                var materials = new THREE.MeshFaceMaterial(newMat );
                 object = new THREE.Mesh(geometry, materials);
                 scene.add( object);
 
@@ -1751,31 +1794,26 @@ function initFactory(){
         map: loader.load('images/textures/plaster/Plaster_001_COLOR.jpg', function(map){
             map.wrapS = THREE.RepeatWrapping;
             map.wrapT = THREE.RepeatWrapping;
-            map.anisotropy = 4;
             map.repeat.set( 2 , 2 )
         }),
         aoMap: loader.load('images/textures/plaster/Plaster_001_OCC.jpg', function(map){
             map.wrapS = THREE.RepeatWrapping;
             map.wrapT = THREE.RepeatWrapping;
-            map.anisotropy = 4;
             map.repeat.set(2 , 2  )
         }),
         displacementMap: loader.load('images/textures/plaster/Plaster_001_DISP.png', function(map){
             map.wrapS = THREE.RepeatWrapping;
             map.wrapT = THREE.RepeatWrapping;
-            map.anisotropy = 4;
             map.repeat.set(2 , 2  )
         }),
         normalMap: loader.load('images/textures/plaster/Plaster_001_NORM.jpg', function(map){
             map.wrapS = THREE.RepeatWrapping;
             map.wrapT = THREE.RepeatWrapping;
-            map.anisotropy = 4;
             map.repeat.set( 2 , 2 )
         }),
         roughnessMap: loader.load('images/textures/plaster/Plaster_001_ROUGH.jpg', function(map){
             map.wrapS = THREE.RepeatWrapping;
             map.wrapT = THREE.RepeatWrapping;
-            map.anisotropy = 4;
             map.repeat.set( 2 , 2 )
         }),
     });
@@ -2183,23 +2221,6 @@ function menu(){
         symbol[2][2].position.set(0, 0.02, 0.05);
       
         
-
-        //menuLevel[2].add(pick);
-        
-    
-    
-
-        /*
-        var geometry = new THREE.PlaneBufferGeometry(0.2, 0.05);
-        
-        plane = new THREE.Mesh(geometry, material);
-        plane.position.set(0, 0.015, 0.05);
-        plane.rotateX(-90*Math.PI/180);
-        tooltip2.add(plane);
-        tooltip2.visible = false;
-        addSymbol()
-        controller1.add(tooltip2); */
-        
         menuLevel[3] = new THREE.Object3D();                                                            //menu for configuration mode
         menuLevel[3].position.set(-0.1, 0 ,-0,15);
         controller1.add(menuLevel[3]);
@@ -2566,7 +2587,11 @@ function menu(){
         shape.lineTo(0.05, 0.05);
         shape.lineTo(0, 0);
 
-        var material = new THREE.MeshPhongMaterial({color: 0xffffff});
+        var material = new THREE.MeshPhongMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.8
+        });
         var geometry = new THREE.ExtrudeBufferGeometry(shape, extrudeSettings);
         var right = new THREE.Mesh(geometry, material);
         right.name = 'next';
@@ -2700,7 +2725,39 @@ function loadData(){
 }
 
 
+//============================= DragControls =============================================================
 
+function dragStart(object, controller) {
+
+	this.controller = controller;
+
+	tempMatrix.getInverse(controller.matrixWorld);
+	
+	object.matrix.premultiply(tempMatrix);
+    object.matrix.decompose(object.position, object.quaternion, object.scale);
+    if (object.material.emissive !== undefined){
+        object.material.emissive.b = 1;
+    }
+	
+	
+	controller.add(object);
+	controller.userData.selected = object;
+}
+
+function dragStop(controller) {
+
+	var object = controller.userData.selected;
+
+	object.matrix.premultiply(controller.matrixWorld);
+	object.matrix.decompose(object.position, object.quaternion, object.scale);
+	if (object.material.emissive !== undefined){
+        object.material.emissive.b = 0;
+    }
+
+	scene.add(object);
+
+	controller.userData.selected = undefined;
+}
 
 
 
