@@ -1,5 +1,6 @@
 //============================ Declaration ==========================================
 
+
 var scene, render, renderer, dollyCam, camera, controller1, controller2, controller3, clock, cube, floor;
 var manager;
 var tutorialWindows = new THREE.Object3D();
@@ -21,7 +22,8 @@ var twoSecObj;
 var doubleClick = {status: false, object: new THREE.Object3D(), clock: new THREE.Clock(), started: false, success: false};
 var guiAlreadyOpened = {status: false, objectGUI: 0};
 
-
+var controller2Model;
+var flashlight, flashsource;
 
 
 var rayGeo, raycaster;
@@ -274,6 +276,7 @@ function init(){
     initGeometry();
     initMenu();
     initPCD();
+    loadFlashlight();
 
 
     //===================== DAT GUI =======================================================
@@ -515,7 +518,8 @@ function loadController() {
         controller.material.map = loader.load('onepointfive_texture2.png');
         controller.material.specularMap = loader.load('onepointfive_spec.png');
         controller.castShadow = true;
-        controller2.add(object.clone());
+        controller2Model = controller;
+        controller2.add(controller2Model);
     }); 
     /* gltfLoader.load('models/gltf/controller1/scene.gltf', 
 				function(gltf){
@@ -566,6 +570,67 @@ function distributeID(){
     }
     
 }
+
+//=========================== load Flashlight ==============================================================
+function loadFlashlight(){
+    var colladaLoader = new THREE.ColladaLoader(manager);
+    var textureLoader = new THREE.TextureLoader(manager);
+    var dae;
+    colladaLoader.load('models/dae/flashlight/source/model.dae', function(collada){
+        dae = collada.scene;
+        dae.traverse( function ( node ) {
+            if ( node instanceof THREE.Mesh){
+                node.material.map = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_albedo.jpeg');
+                node.material.normalMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_normal.png');
+                node.material.aoMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_AO.jpeg');
+                node.material.emissiveMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_emissive.jpeg');
+                node.material.metalnessMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_metallic.jpeg');
+                node.material.roughnessMap = textureLoader.load('models/dae/flashlight/textures/DefaultMaterial_roughness.jpeg');
+            } 
+        }); 
+
+        dae.scale.set(0.15, 0.15, 0.15)
+        controller2.add(dae);
+        flashlight = dae;
+        flashlight.visible = false;
+        flashlight.castShadow = true;
+        flashlight.receiveShadow = true;
+        dae.rotation.y += Math.PI / 2.0;
+    
+
+        flashsource = new THREE.SpotLight(0xffffff, 2, 20, 0.20, 0.8, 2);
+        flashsource.castShadow = true;
+        flashsource.shadow.bias = - 0.001;
+        flashlight.add(flashsource, flashsource.target);
+        flashsource.target.position.set(2, 0, 0);
+        flashlight.position.set(0,0, 0.04)
+        flashsource.position.set(1, 0 , 0);
+        var geometry = new THREE.CylinderGeometry(0.15, 3, 20, 32*2, 20 , true);
+        geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, -geometry.parameters.height/2, 0 ) );
+	    geometry.applyMatrix( new THREE.Matrix4().makeRotationX( -Math.PI / 2 ) );
+        var material =  new THREEx.VolumetricSpotLightMaterial();
+        
+        var mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(1, 0 , 0);
+        material.uniforms.lightColor.value.set('white')
+        material.uniforms.spotPosition.value = mesh.position;
+        material.uniforms.anglePower.value = 5;
+        material.uniforms.attenuation.value = 10;
+        mesh.lookAt(flashsource.target.position);
+        
+        flashlight.add(mesh);
+      
+
+    },
+    function ( xhr ) {
+    console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+    },
+
+    function ( error ) {
+    console.log( 'An error happened' )
+    })
+    
+    }
 
 //================================ Controller 1 ===================================================
 
@@ -886,7 +951,17 @@ function handleIntersections(){
                     simulateObj[0].userData.simulate.status = true; */
     
                     return;
-                }else if (object.name === "Robot") {
+                } else if (object.name === "Flashlight"){
+                    if(!flashlight.visible){
+                        flashlight.visible = true;
+                        controller2Model.visible = false;
+                    } else {
+                        flashlight.visible = false;
+                        controller2Model.visible = true;
+                    }
+                   
+                    
+                } else if (object.name === "Robot") {
                     menuStep = 2;
                     menu();
                     return;
@@ -2195,6 +2270,10 @@ function menu(){
         symbol[1][3].position.z += 0.1;
         symbol[1][3].position.y -= 0.025;
 
+        addSymbol('Flashlight', 0.05, 0.05, 0.005, 0.005, 1, './images/symbols/flashlight.png');
+        symbol[1][4].position.z += 0.2;
+        symbol[1][4].position.y -=0.5;
+
         
         controller1.add(menuLevel[1]);
 
@@ -2268,6 +2347,9 @@ function menu(){
         for(var i = 0; i <= menuLevel.length -1 ; i++){
             rayGroup.push(menuLevel[i]);
         }
+
+
+    
         
         
         createArrowButtons();                                                                           //arrow symbols
