@@ -203,7 +203,7 @@ function init(){
 
         //rayGroup.push(cube); 
 
-        initFactory();
+        //initFactory();
         excludeGroup.push('floor', 'frame');
     
        
@@ -277,6 +277,7 @@ function init(){
     initMenu();
     initPCD();
     loadFlashlight();
+    loadHall();
 
 
     //===================== DAT GUI =======================================================
@@ -1355,15 +1356,15 @@ function switchPick(){
         switch(workpieceState){
             case 0:
                 getRoundPos('workpiece');
-                pickObj = workpiece[1].clone();
+                picker(workpiece[1]);
                 break;
             case 1:
                 getRoundPos('workpiece');
-                pickObj = workpiece[2].clone();
+                picker(workpiece[2]);
                 break;
             case 2:
                 getRoundPos('workpiece');
-                pickObj = workpiece[0].clone();
+                picker(workpiece[0]);
                 break;
         } 
     }  else if (menuStep === 5){
@@ -1389,6 +1390,19 @@ function switchPick(){
         }
     }
     
+    function picker(obj){
+        pickObj = obj.clone();
+        pickObj.userData = obj.userData;
+
+        var material;
+        if(obj.material.type === 'MeshStandardMaterial'){
+            material = new THREE.MeshStandardMaterial;
+        }
+        material.roughness = obj.material.roughness;
+        material.metalness = obj.material.metalness;
+        material.color = obj.material.color;
+        pickObj.material = material;
+    }
     
 
     
@@ -1690,6 +1704,7 @@ function initWorkpiece(){
         metalness: 0.5,
         roughness: 0.5
     })
+    
 
     var geometry = [];
     geometry[0] = new THREE.BoxBufferGeometry(0.5, 0.5, 0.5);
@@ -2839,6 +2854,28 @@ function dragStop(controller) {
 	scene.add(object);
 
 	controller.userData.selected = undefined;
+}
+
+function loadHall(){
+    var gltfLoader = new THREE.GLTFLoader(manager);
+    gltfLoader.load(
+        'models/gltf/hall/hall.gltf',
+        function ( gltf ) {
+            gltf.scene.traverse(function(node){
+                if (node instanceof THREE.Mesh){
+                  
+                    node.castShadow = true; 
+                }
+            });
+            scene.add( gltf.scene );
+        },
+        function ( xhr ) {
+            console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded treegarden2' );
+        },
+        function ( error ) {
+            console.log( 'An error happened' );
+        }
+    );
 }
 
 
