@@ -165,7 +165,7 @@ function init(){
         scene.add(new THREE.HemisphereLight(0x909090, 0x404040));
 
         pointLight[0] = new THREE.PointLight(0xffffff, 1, 15, 2);
-        pointLight[0].position.set(-15 , 10, 0);
+        pointLight[0].position.set(5 , 5, 0);
        /*pointLight[1] = new THREE.PointLight(0xffffff, 1, 300, 2);
         pointLight[1].position.set(100 , 100, 0);
         pointLight[2] = new THREE.PointLight(0xffffff, 1, 300, 2);
@@ -203,7 +203,8 @@ function init(){
 
         //rayGroup.push(cube); 
 
-        //initFactory();
+       // initFactory();
+       
         excludeGroup.push('floor', 'frame');
     
        
@@ -2870,15 +2871,13 @@ function loadHall(){
             scene.add( gltf.scene );
         },
         function ( xhr ) {
-            console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded treegarden2' );
+            console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded hall' );
         },
         function ( error ) {
-            console.log( 'An error happened' );
+            console.log( 'An error happened here' );
         }
     );
-}
-
-
+} 
 
 
 
