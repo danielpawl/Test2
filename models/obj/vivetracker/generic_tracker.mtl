@@ -1,7 +1,3 @@
-newmtl generic_tracker_polySurface2SG1
-illum 4
-Kd 0.00 0.00 0.00
-Ka 0.00 0.00 0.00
-Tf 1.00 1.00 1.00
-map_Kd generic_tracker.tga
-Ni 1.00
+version https://git-lfs.github.com/spec/v1
+oid sha256:73a47b4b97f2a0233f069fda7e6f5f081e5f2f2f906c0edefbb73d5aadec0c0d
+size 143
