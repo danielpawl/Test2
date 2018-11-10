@@ -55,8 +55,8 @@
 	</style>
 </head>
 <html>
-	<script src="js/build/three.js"></script>
-	<script  src="js/libs/physi.js"></script>
+	<script src="js\build\three.js"></script>
+	<script  src="js\libs\physi.js"></script>
 	<script src="js\examples\js\controls\OrbitControls.js" ></script>
 	<script src="js\examples\js\controls\PointerLockControls.js" ></script>
 	<script src="js\src\loaders\TextureLoader.js" ></script>
@@ -719,6 +719,8 @@
 		loadRobo2();
 		blender();
 		blender2();
+		blender3();
+		blender4();
 		
 
 		
@@ -1303,6 +1305,56 @@
 			})
 			
 			}
+			function blender3(){
+				var loader = new THREE.OBJLoader();
+
+			// load a resource
+			loader.load(
+				// resource URL
+				'models/obj/blender/cube.obj',
+				// called when resource is loaded
+				function ( object ) {
+
+					scene.add( object );
+					object.position.set(40, 3, 250);
+
+				},
+				// called when loading is in progresses
+				function ( xhr ) {
+
+					console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+
+				},
+				// called when loading has errors
+				function ( error ) {
+
+					console.log( 'An error happened' );
+			
+			})
+			}
+
+		function blender4(){
+			gltfLoader.load('models/gltf/pillar/pillar.gltf',
+				function ( gltf ) {
+					gltf.scene.position.set(40, 3, 250);
+					gltf.scene.scale.set(10, 10, 10);
+
+					gltf.scene.traverse(function(node){
+						if (node instanceof THREE.Mesh){
+							node.castShadow = true; 
+						}
+					});
+					scene.add( gltf.scene );
+				},
+				function ( xhr ) {
+					console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded - treegarden1' );
+
+				},
+				function ( error ) {
+					console.log( 'An error happened' );
+				}
+			);
+		}
 
 	window.onload = init;
 	
