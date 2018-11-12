@@ -38494,7 +38494,7 @@
 			var scope = this;
 
 			var path = ( this.path === undefined ) ? LoaderUtils.extractUrlBase( url ) : this.path;
-			this.resourcePath = this.resourcePath || path;
+			this.resourcePath = this.resourcePath ||path;
 
 			var loader = new FileLoader( scope.manager );
 			loader.setPath( this.path );
