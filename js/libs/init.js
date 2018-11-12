@@ -128,7 +128,7 @@ function init(){
 
     //______________________________ Basic Setup ___________________________________________________________
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x80d4ff); //0xd8d3cb
+        //scene.background = new THREE.Color(0x80d4ff); //0xd8d3cb
 
         renderer = new THREE.WebGLRenderer({antialias:true});
         renderer.setPixelRatio(window.devicePixelRatio);
@@ -155,25 +155,15 @@ function init(){
         //hemi.position.set(0, 10, 0);
         //scene.add(hemi ); 
 
+       
         var pointLight = [];
-
-          
-        var x = -100;
-        var z = -100;
 
         scene.add(new THREE.AmbientLight(0x404040, 0.3));
         scene.add(new THREE.HemisphereLight(0x909090, 0x404040));
 
         pointLight[0] = new THREE.PointLight(0xffffff, 1, 15, 2);
         pointLight[0].position.set(5 , 5, 0);
-       /*pointLight[1] = new THREE.PointLight(0xffffff, 1, 300, 2);
-        pointLight[1].position.set(100 , 100, 0);
-        pointLight[2] = new THREE.PointLight(0xffffff, 1, 300, 2);
-        pointLight[2].position.set(0 , 100, 100);
-        pointLight[3] = new THREE.PointLight(0xffffff, 1, 300, 2);
-        pointLight[3].position.set(0, 100, -100);
-        scene.add(pointLight[0], pointLight[1], pointLight[2], pointLight[3],) */
-      
+       
         
        
        var point = new THREE.DirectionalLight(0xffffff, 0.5);
@@ -186,7 +176,7 @@ function init(){
         point.shadow.mapSize.set( 4096, 4096 );
         point.shadow.bias = -0.0001;
         scene.add(point);
-        point.position.set(0, 50, 30);
+        point.position.set(200, 200, -150);
         
         
         var cubeGeo = new THREE.BoxBufferGeometry(2,2,2);
@@ -204,6 +194,62 @@ function init(){
         //rayGroup.push(cube); 
 
        // initFactory();
+       var loader = new THREE.TextureLoader();
+        var floorGeo = new THREE.PlaneBufferGeometry(12, 22.5);
+        var floorMat = new THREE.MeshStandardMaterial({
+            map: loader.load('images/textures/floor/Metal_Plate_002_COLOR.jpg', function(map){
+                map.wrapS = THREE.RepeatWrapping;
+                map.wrapT = THREE.RepeatWrapping;
+                map.repeat.set( 256/4, 256/2 )
+            }),
+
+            normalMap: loader.load('images/textures/floor/Metal_Plate_002_NORM.jpg', function(map){
+                map.wrapS = THREE.RepeatWrapping;
+                map.wrapT = THREE.RepeatWrapping;
+                map.repeat.set( 256/4, 256/2 )
+            }), 
+            //normalScale: new THREE.Vector2( 0.1, 0.1),
+
+            roughness: loader.load('images/textures/floor/Metal_Plate_002_ROUGH.jpg', function(map){
+                map.wrapS = THREE.RepeatWrapping;
+                map.wrapT = THREE.RepeatWrapping;
+                map.repeat.set( 256/4, 256/2 )
+            }),
+        });
+        floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.position.set(0,0,0);
+        floor.rotateX(-90* Math.PI/180);
+        floor.receiveShadow = true;
+        floor.name = 'floor';
+        rayGroup.push(floor);
+         scene.add(floor);
+
+         var floorGeo2 = new THREE.PlaneBufferGeometry(500, 500);
+        var floorMat2 = new THREE.MeshStandardMaterial({ metalness: 0.1
+        });
+        loader.load("js/examples/textures/terrain/grasslight-big.jpg", function( map) {
+            map.wrapS = THREE.RepeatWrapping;
+            map.wrapT = THREE.RepeatWrapping;
+            map.anisotropy = 4;
+            map.repeat.set( 100, 100 );
+            floorMat2.map = map;
+            floorMat2.needsUpdate = true;
+        });
+        loader.load("js/examples/textures/terrain/grasslight-big-nm.jpg", function( map) {
+            map.wrapS = THREE.RepeatWrapping;
+            map.wrapT = THREE.RepeatWrapping;
+            map.anisotropy = 4;
+            map.repeat.set( 10, 24 );
+            floorMat2.normalMap = map;
+            floorMat2.needsUpdate = true;
+        });
+        floor2 = new THREE.Mesh(floorGeo2, floorMat2, 0);
+        floor2.rotation.x = -Math.PI / 2.0;
+        floor2.receiveShadow = true;
+        floor2.castShadow = true;
+        floor2.position.set(0, -0.05, 0);
+        scene.add(floor2);
+        
        
         excludeGroup.push('floor', 'frame');
     
@@ -240,7 +286,7 @@ function init(){
                 dollyCam.add(controller2);
             
         
-        
+
 
         
 
@@ -279,6 +325,8 @@ function init(){
     initPCD();
     loadFlashlight();
     loadHall();
+    loadSky();
+    
 
 
     //===================== DAT GUI =======================================================
@@ -1840,37 +1888,10 @@ function initConveyor(){
 //========================== Envorinment ================================================================
 
 function initFactory(){
-    var loader = new THREE.TextureLoader();
-    var floorGeo = new THREE.PlaneBufferGeometry(50, 50);
-    var floorMat = new THREE.MeshStandardMaterial({
-        map: loader.load('images/textures/floor/Metal_Plate_002_COLOR.jpg', function(map){
-            map.wrapS = THREE.RepeatWrapping;
-            map.wrapT = THREE.RepeatWrapping;
-            map.repeat.set( 256, 256 )
-        }),
-
-        normalMap: loader.load('images/textures/floor/Metal_Plate_002_NORM.jpg', function(map){
-            map.wrapS = THREE.RepeatWrapping;
-            map.wrapT = THREE.RepeatWrapping;
-            map.repeat.set( 256, 256 )
-        }), 
-        //normalScale: new THREE.Vector2( 0.1, 0.1),
-
-        roughness: loader.load('images/textures/floor/Metal_Plate_002_ROUGH.jpg', function(map){
-            map.wrapS = THREE.RepeatWrapping;
-            map.wrapT = THREE.RepeatWrapping;
-            map.repeat.set( 256, 256 )
-        }),
-    });
-    floor = new THREE.Mesh(floorGeo, floorMat);
-    floor.position.set(0,0,0);
-    floor.rotateX(-90* Math.PI/180);
-    floor.receiveShadow = true;
-    floor.name = 'floor';
+    
     
 
-    rayGroup.push(floor);
-    scene.add(floor);
+    
 
     var shape = new THREE.Shape();
     shape.moveTo(floorGeo.parameters.width/2 , 0);
@@ -2288,7 +2309,7 @@ function menu(){
 
         addSymbol('Flashlight', 0.05, 0.05, 0.005, 0.005, 1, './images/symbols/flashlight.png');
         symbol[1][4].position.z += 0.2;
-        symbol[1][4].position.y -=0.5;
+        symbol[1][4].position.y -=0.05;
 
         
         controller1.add(menuLevel[1]);
@@ -2775,7 +2796,7 @@ function initPCD(){
     // load a resource
     loader.load(
         // resource URL
-        'models/pcd/faps/table.pcd',
+        'models/pcd/faps/table2.pcd',
         // called when the resource is loaded
         function ( mesh ) {
             var oldMat = new THREE.MeshPhongMaterial();
@@ -2860,7 +2881,7 @@ function dragStop(controller) {
 function loadHall(){
     var gltfLoader = new THREE.GLTFLoader(manager);
     gltfLoader.load(
-        'models/gltf/hall/hall.gltf',
+        'models/gltf/pillar/pillar.gltf',
         function ( gltf ) {
             gltf.scene.traverse(function(node){
                 if (node instanceof THREE.Mesh){
@@ -2878,6 +2899,24 @@ function loadHall(){
         }
     );
 } 
+
+function loadSky(){
+
+    new THREE.TextureLoader(manager).load( 'images/textures/sky/sky8k.jpg', function ( texture ) {
+
+
+        var material = new THREE.MeshBasicMaterial( { map: texture } );
+
+        var sphere = new THREE.SphereBufferGeometry( 500,32 ,32 );
+
+        var mesh = new THREE.Mesh( sphere, material );
+        mesh.material.side = THREE.BackSide;
+
+        scene.add( mesh );
+    });
+}
+
+
 
 
 
