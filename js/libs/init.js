@@ -180,6 +180,7 @@ function init(){
         
         
         var cubeGeo = new THREE.BoxBufferGeometry(2,2,2);
+
         var cubeMat = new THREE.MeshPhongMaterial({
             color: 0x00ff00,
             roughness: 0
@@ -770,6 +771,7 @@ controller2.addEventListener('menuup', onMenuUp2);
 function onTriggerDown2(){
     input.pressed(true);
     handleIntersections();
+    exportJSON(robo[0]);
 }
 
 function onTriggerUp2(){
@@ -2916,6 +2918,21 @@ function loadSky(){
     });
 }
 
+function exportJSON(JsonExport){
+    const filename = 'data.json';
+    const jsonStr = 'Hello World!'
+
+    let element = document.createElement('a');
+    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(jsonStr));
+    element.setAttribute('download', filename);
+
+    element.style.display = 'none';
+    document.body.appendChild(element);
+
+    element.click();
+
+    document.body.removeChild(element);
+}
 
 
 
